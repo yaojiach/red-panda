@@ -26,7 +26,7 @@ Import `red-panda` and create an instance of `RedPanda`. If you create the insta
 
     .. code-block:: python
 
-        import red_panda as rp
+        from red_panda import RedPanda
 
         redshift_conf = {
             'user': 'awesome-developer',
