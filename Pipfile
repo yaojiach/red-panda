@@ -17,6 +17,7 @@ sphinx = "*"
 twine = "*"
 sphinx-autobuild = "*"
 recommonmark = "*"
+restview = "*"
 
 [requires]
 python_version = "3.6"
