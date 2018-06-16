@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pandas = "*"
+"psycopg2-binary" = "*"
+"boto3" = "*"
+botocore = "*"
+
+[dev-packages]
+pylint = "*"
+pytest = "*"
+tox = "*"
+sphinx = "*"
+twine = "*"
+sphinx-autobuild = "*"
+recommonmark = "*"
+
+[requires]
+python_version = "3.6"
