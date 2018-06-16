@@ -53,7 +53,8 @@ class RedPanda:
         s3_conf: Dict, S3 configuration.
 
     # References
-        - https://github.com/agawronski/pandas_redshift
+        - https://github.com/getredash/redash for handling connections
+        - https://github.com/agawronski/pandas_redshift for `df_to_redshift`
     """
     
     def __init__(self, redshift_config, s3_config=None, debug=False):
