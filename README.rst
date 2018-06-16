@@ -73,3 +73,4 @@ In no particular order:
 - Add encryption options for files uploaded to S3.
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
 - Support more data formats.
+- Build cli to manage data outside of Python.

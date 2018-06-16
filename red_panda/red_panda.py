@@ -48,9 +48,11 @@ class RedPanda:
 
     # Arguments
     
-        redshift_conf: Dict, Redshift configuration.
+        redshift_conf: dict, Redshift configuration.
     
-        s3_conf: Dict, S3 configuration.
+        s3_conf: dict, S3 configuration.
+
+        debug: bool, if True, queries will be printed instead of executed.
 
     # References
         - https://github.com/getredash/redash for handling connections
@@ -109,7 +111,7 @@ class RedPanda:
         """
         if self._debug:
             print(dedent(sql))
-            return
+            return (None, None)
 
         conn = self._connect_redshift()
         cursor = conn.cursor()
