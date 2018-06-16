@@ -14,12 +14,49 @@ Features
 Installation
 ------------
 
-.. code-block:: console
-    $ pip install red-panda
+    .. code-block:: console
+       
+        $ pip install red-panda
 
 
-Examples
---------
+Using red-panda
+---------------
+
+Import `red-panda` and create an instance of `RedPanda`. If you create the instance with `debug` on (i.e. `rp = RedPanda(redshift_conf, s3_conf, debug=True)`), `red-panda` will print the planned queries instead of executing them.
+
+    .. code-block:: python
+
+        import red_panda as rp
+
+        redshift_conf = {
+            'user': 'awesome-developer',
+            'password': 'strong-password',
+            'host': 'awesome-domain.us-east-1.redshift.amazonaws.com',
+            'port': 5432,
+            'dbname': 'awesome-db',
+        }
+
+        s3_conf = {
+            'aws_access_key_id': 'your-aws-access-key-id',
+            'aws_secret_access_key': 'your-aws-secret-access-key',
+            # 'aws_session_token': 'temporary-token-if-you-have-one',
+        }
+
+        rp = RedPanda(redshift_conf, s3_conf)
+
+
+Load your Pandas DataFrame into Redshift as a new table.
+
+    .. code-block:: python
+
+        import pandas as pd
+
+        df = pd.DataFrame(data={'col1': [1, 2], 'col2': [3, 4]})
+
+        your_bucket = 's3-bucket-name'
+        your_path = 'parent-folder/child-folder' # optional
+        file_name = 'test.csv' # optional
+        rp.df_to_redshift(df, 'test_table', bucket=your_bucket, path=your_path, append=False)
 
 
 TODO
