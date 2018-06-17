@@ -96,6 +96,21 @@ class RedPanda:
         if self._check_s3_key_existence(bucket, key):
             warnings.warn(f'{key} exists in {bucket}. May cause data consistency issues.')
 
+    def _get_redshift_n_slices(self):
+        """Get number of slices of a Redshift cluster
+
+        # TODO
+
+            This line `n_slices = data[0][0]` is a little sketchy
+
+        """
+        data, _ = self.run_query('select count(1) from stv_slices', fetch=True)
+        try:
+            n_slices = data[0][0]
+        except IndexError:
+            print('No information returned from: select count(1) from stv_slices')
+        return n_slices
+
     def run_query(self, sql, fetch=False):
         """Run generic SQL
 
