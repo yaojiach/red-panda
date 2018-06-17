@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import warnings
+from collections import OrderedDict
 from io import StringIO
 from textwrap import dedent
 
@@ -163,7 +164,7 @@ class RedPanda:
         s3 = self._connect_s3()
         buffer = StringIO()
         to_csv_kwargs = {k: v for k, v in kwargs.items() if k in TOCSV_KWARGS}
-        df.to_csv(buffer, index=False, **to_csv_kwargs)
+        df.to_csv(buffer, **to_csv_kwargs)
         self._warn_s3_key_existence(bucket, key)
         s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue())
 
@@ -282,16 +283,27 @@ class RedPanda:
             kwargs: keyword arguments to pass to Pandas `to_csv` and Redshift COPY. 
             See red_panda.constants for all implemented arguments.
         """
-        check_invalid_columns(list(df.columns))
         to_csv_kwargs = {k: v for k, v in kwargs.items() if k in TOCSV_KWARGS}
         copy_kwargs = {k: v for k, v in kwargs.items() if k in COPY_KWARGS}
+        
+        if column_definition is None:
+            column_definition = map_types(OrderedDict(df.dtypes))
+
+        if to_csv_kwargs.get('index'):
+            if df.index.name:
+                full_column_definition = OrderedDict({df.index.name: df.index.dtype})
+            else:
+                full_column_definition = OrderedDict({'index': df.index.dtype})
+            full_column_definition = map_types(full_column_definition)
+            full_column_definition.update(column_definition)
+            column_definition = full_column_definition
+
+        check_invalid_columns(list(column_definition))
         if file_name is None:
             import time
             file_name = f'redpanda-{int(time.time())}'
         s3_key = os.path.join(path if path is not None else '', file_name)
         self.df_to_s3(df, bucket=bucket, key=s3_key, **to_csv_kwargs)
-        if column_definition is None:
-            column_definition = map_types(dict(df.dtypes))
         self.s3_to_redshift(
             bucket,
             s3_key,

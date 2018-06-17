@@ -160,7 +160,7 @@ TOCSV_KWARGS = [
     'float_format', 
     'columns', 
     'header', 
-    # 'index', 
+    'index', 
     'index_label', 
     'mode', 
     'encoding', 
@@ -187,6 +187,7 @@ COPY_KWARGS = [
 
 TYPES_MAP = {
     'O': 'varchar(256)',
+    'object': 'varchar(256)',
     'int64': 'bigint',
     'float64': 'double precision',
 }
