@@ -86,7 +86,7 @@ It is also possible to:
     )
 
 
-For API documentation, visit `https://red-panda.readthedocs.io/en/latest/<https://red-panda.readthedocs.io/en/latest/>`_.
+For API documentation, visit https://red-panda.readthedocs.io/en/latest/.
 
 
 TODO
