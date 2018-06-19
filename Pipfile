@@ -18,6 +18,7 @@ twine = "*"
 sphinx-autobuild = "*"
 recommonmark = "*"
 restview = "*"
+sphinx-rtd-theme = "*"
 
 [requires]
 python_version = "3.6"
