@@ -14,9 +14,9 @@ Features
 Installation
 ------------
 
-    .. code-block:: console
-       
-        $ pip install red-panda
+.. code-block:: console
+    
+    $ pip install red-panda
 
 
 Using red-panda
@@ -24,39 +24,69 @@ Using red-panda
 
 Import `red-panda` and create an instance of `RedPanda`. If you create the instance with `debug` on (i.e. `rp = RedPanda(redshift_conf, s3_conf, debug=True)`), `red-panda` will print the planned queries instead of executing them.
 
-    .. code-block:: python
+.. code-block:: python
 
-        from red_panda import RedPanda
+    from red_panda import RedPanda
 
-        redshift_conf = {
-            'user': 'awesome-developer',
-            'password': 'strong-password',
-            'host': 'awesome-domain.us-east-1.redshift.amazonaws.com',
-            'port': 5432,
-            'dbname': 'awesome-db',
-        }
+    redshift_conf = {
+        'user': 'awesome-developer',
+        'password': 'strong-password',
+        'host': 'awesome-domain.us-east-1.redshift.amazonaws.com',
+        'port': 5432,
+        'dbname': 'awesome-db',
+    }
 
-        s3_conf = {
-            'aws_access_key_id': 'your-aws-access-key-id',
-            'aws_secret_access_key': 'your-aws-secret-access-key',
-            # 'aws_session_token': 'temporary-token-if-you-have-one',
-        }
+    s3_conf = {
+        'aws_access_key_id': 'your-aws-access-key-id',
+        'aws_secret_access_key': 'your-aws-secret-access-key',
+        # 'aws_session_token': 'temporary-token-if-you-have-one',
+    }
 
-        rp = RedPanda(redshift_conf, s3_conf)
+    rp = RedPanda(redshift_conf, s3_conf)
 
 
 Load your Pandas DataFrame into Redshift as a new table.
 
-    .. code-block:: python
+.. code-block:: python
 
-        import pandas as pd
+    import pandas as pd
 
-        df = pd.DataFrame(data={'col1': [1, 2], 'col2': [3, 4]})
+    df = pd.DataFrame(data={'col1': [1, 2], 'col2': [3, 4]})
 
-        your_bucket = 's3-bucket-name'
-        your_path = 'parent-folder/child-folder' # optional
-        file_name = 'test.csv' # optional
-        rp.df_to_redshift(df, 'test_table', bucket=your_bucket, path=your_path, append=False)
+    s3_bucket = 's3-bucket-name'
+    s3_path = 'parent-folder/child-folder' # optional, if you don't have any sub folders
+    s3_file_name = 'test.csv' # optional, randomly generated if not provided
+    rp.df_to_redshift(df, 'test_table', bucket=s3_bucket, path=s3_path, append=False)
+
+
+It is also possible to: 
+
+- Upload a DataFrame or flat file to S3
+- Delete files from S3
+- Load S3 data into Redshift
+
+
+.. code-block:: python
+
+    s3_key = s3_path + '/' + s3_file_name
+    rp.df_to_s3(df, s3_bucket, s3_key)
+    
+    rp.delete_from_s3(s3_bucket, s3_key)
+    
+    pd.to_csv(df, 'test_data.csv', index=False)
+    rp.file_to_s3('test_data.csv', s3_bucket, s3_key)
+
+
+    redshift_column_datatype = {
+        'col1': 'int',
+        'col2': 'int',
+    }
+    rp.s3_to_redshift(
+        s3_bucket, s3_key, 'test_table', column_definition=redshift_column_datatype
+    )
+
+
+For API documentation, visit `https://red-panda.readthedocs.io/en/latest/<https://red-panda.readthedocs.io/en/latest/>`_.
 
 
 TODO
@@ -65,12 +95,17 @@ TODO
 In no particular order:
 
 - Improve tests and docs.
-- Handle when user does have implicit column that is the index in a DataFrame. Currently index is automatically dropped.
 - Better ways of inferring data types from dataframe to Redshift.
-- Take advantage of Redshift slices for parallel processing. Split files for COPY.
 - Explore using `S3 Transfer Manager`'s upload_fileobj for `df_to_s3` to take advantage of automatic multipart upload.
-- More options for data consistency management. Currently deleting file from S3 after COPY.
 - Add encryption options for files uploaded to S3.
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
 - Support more data formats.
 - Build cli to manage data outside of Python.
+
+In progress:
+
+- Take advantage of Redshift slices for parallel processing. Split files for COPY.
+
+Done:
+
+- Handle when user does have implicit column that is the index in a DataFrame. Currently index is automatically dropped.
