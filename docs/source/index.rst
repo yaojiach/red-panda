@@ -11,6 +11,8 @@ Welcome to Red Panda's documentation!
    :caption: Contents:
 
 
+.. include:: ../../README.rst
+
 
 Indices and tables
 ==================
