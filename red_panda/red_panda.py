@@ -48,7 +48,6 @@ class RedPanda:
     Solves interoperability between Pandas and Redshift through csv ingestion via S3.
 
     # Arguments
-    
         redshift_conf: dict, Redshift configuration.
     
         s3_conf: dict, S3 configuration.
@@ -101,7 +100,6 @@ class RedPanda:
         """Get number of slices of a Redshift cluster
 
         # TODO
-
             This line `n_slices = data[0][0]` is a little sketchy
 
         """
@@ -115,8 +113,7 @@ class RedPanda:
     def run_query(self, sql, fetch=False):
         """Run generic SQL
 
-        # Argument
-        
+        # Arguments
             sql: str
         
             fetch: bool, if or not to return data from the query.
@@ -154,7 +151,6 @@ class RedPanda:
         """Put DataFrame to S3
         
         # Arguments
-        
             df: pandas.DataFrame, source dataframe.
         
             bucket: str, S3 bucket name.
@@ -172,7 +168,6 @@ class RedPanda:
         """Put a file to S3
 
         # Arguments
-
             file_name: str, path to file.
         
             bucket: str, S3 bucket name.
@@ -187,7 +182,6 @@ class RedPanda:
         """Delete object from S3
 
         # Arguments
-
             bucket: str, S3 bucket name.
         
             key: str, S3 key.
@@ -216,6 +210,39 @@ class RedPanda:
         null=None,
         region=None
     ):
+        """Load S3 file into Redshift
+
+        # Arguments
+            bucket: str, S3 bucket name.
+            
+            key: str, S3 key.
+
+            table_name: str, Redshift table name (optional include schema name).
+
+            column_definition: dict, (optional) specify the column definition if for CREATE TABLE.
+
+            append: bool, if True, df will be appended to Redshift table, otherwise table will be
+            dropped and recreated.
+
+            delimiter: str, delimiter of file. Default is ",".
+            
+            ignoreheader: int, number of header lines to skip when COPY.
+            
+            quote_character: str, QUOTE_CHARACTER for COPY. Only used when delimiter is ",".
+            Default to '"'.
+            
+            dateformat: str, TIMEFORMAT argument for COPY. Default is "auto". 
+            
+            timeformat: str, TIMEFORMAT argument for COPY. Default is "auto".
+            
+            acceptinvchars: bool, whether to include the ACCEPTINVCHAR argument in COPY.
+            
+            escape: bool, whether to include the ESCAPE argument in COPY.
+            
+            null: str, specify the NULL AS string.
+            
+            region: str, S3 region.
+        """
         if not append:
             if column_definition is None:
                 raise ValueError('column_definition cannot be None if append is False')
@@ -268,7 +295,6 @@ class RedPanda:
         """Pandas DataFrame to Redshift table
 
         # Arguments
-
             df: pandas.DataFrame, source dataframe.
         
             table_name: str, Redshift table name (optional include schema name).
@@ -276,11 +302,9 @@ class RedPanda:
             bucket: str, S3 bucket name.
         
             column_definition: dict, (optional) specify the column definition if for CREATE TABLE.
-        
             If not given and append is False, data type will be inferred.
         
             append: bool, if true, df will be appended to Redshift table, otherwise table will be
-        
             dropped and recreated.
         
             path: str, S3 key excluding file name.
@@ -289,8 +313,8 @@ class RedPanda:
         
             cleanup: bool, default true, S3 file will be deleted after COPY.
         
-            kwargs: keyword arguments to pass to Pandas `to_csv` and Redshift COPY. 
-            See red_panda.constants for all implemented arguments.
+            kwargs: keyword arguments to pass to Pandas `to_csv` and Redshift COPY. See 
+            red_panda.constants for all implemented arguments.
         """
         to_csv_kwargs = {k: v for k, v in kwargs.items() if k in TOCSV_KWARGS}
         copy_kwargs = {k: v for k, v in kwargs.items() if k in COPY_KWARGS}
