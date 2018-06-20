@@ -183,6 +183,9 @@ COPY_KWARGS = [
     'dateformat',
     'timeformat',
     'region',
+    'null',
+    'escape',
+    'acceptinvchars',
 ]
 
 TYPES_MAP = {

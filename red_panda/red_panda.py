@@ -211,6 +211,9 @@ class RedPanda:
         quote_character='"',
         dateformat='auto',
         timeformat='auto',
+        acceptinvchar=True,
+        escape=False,
+        null=None,
         region=None
     ):
         if not append:
@@ -227,6 +230,9 @@ class RedPanda:
         s3_source = f's3://{bucket}/{key}'
         quote_option = f"csv quote as '{quote_character}'" if delimiter == ',' else ''
         region_option = f"region '{region}'" if region is not None else ''
+        escape_option = 'escape' if escape else ''
+        acceptinvchar_option = 'acceptinvchar' if acceptinvchar else ''
+        null_option = f"null as '{null}'" if null is not None else ''
         aws_token = self.s3_config.get("aws_session_token")
         aws_token_option = f"session_token '{aws_token}'" if aws_token is not None else ''
         copy_template = f"""\
@@ -234,6 +240,9 @@ class RedPanda:
         from '{s3_source}' 
         delimiter '{delimiter}'
         {quote_option}
+        {escape_option}
+        {acceptinvchar_option}
+        {null_option}
         ignoreheader {ignoreheader}
         dateformat '{dateformat}'
         timeformat '{dateformat}'
