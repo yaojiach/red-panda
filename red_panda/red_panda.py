@@ -245,7 +245,7 @@ class RedPanda:
         {null_option}
         ignoreheader {ignoreheader}
         dateformat '{dateformat}'
-        timeformat '{dateformat}'
+        timeformat '{timeformat}'
         access_key_id '{self.s3_config.get("aws_access_key_id")}'
         secret_access_key '{self.s3_config.get("aws_secret_access_key")}'
         {aws_token_option}
