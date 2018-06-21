@@ -101,6 +101,7 @@ In no particular order:
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
 - Support more data formats.
 - Build cli to manage data outside of Python.
+- Support GCP?
 
 In progress:
 
