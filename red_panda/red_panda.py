@@ -97,27 +97,20 @@ class RedPanda:
             warnings.warn(f'{key} exists in {bucket}. May cause data consistency issues.')
 
     def _get_redshift_n_slices(self):
-        """Get number of slices of a Redshift cluster
-
-        # TODO
-            This line `n_slices = data[0][0]` is a little sketchy
-
-        """
+        """Get number of slices of a Redshift cluster"""
         data, _ = self.run_query('select count(1) from stv_slices', fetch=True)
         try:
             n_slices = data[0][0]
         except IndexError:
-            print('No information returned from: select count(1) from stv_slices')
+            print('Could not derive number of slices of Redshift cluster.')
         return n_slices
 
     def get_s3_resource(self):
-        """Return a boto3 S3 resource
-        """
+        """Return a boto3 S3 resource"""
         return self._connect_s3()
     
     def get_s3_client(self):
-        """Return a boto3 S3 client
-        """
+        """Return a boto3 S3 client"""
         return self._connect_s3().meta.client
 
     def run_query(self, sql, fetch=False):
