@@ -110,6 +110,16 @@ class RedPanda:
             print('No information returned from: select count(1) from stv_slices')
         return n_slices
 
+    def get_s3_resource(self):
+        """Return a boto3 S3 resource
+        """
+        return self._connect_s3()
+    
+    def get_s3_client(self):
+        """Return a boto3 S3 client
+        """
+        return self._connect_s3().meta.client
+
     def run_query(self, sql, fetch=False):
         """Run generic SQL
 
