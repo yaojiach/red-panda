@@ -110,4 +110,5 @@ Done:
 
 - Handle when user does have implicit column that is the index in a DataFrame. Currently index is automatically dropped.
 - Add encryption options for files uploaded to S3.
+
     - By adding support for all kwargs for s3 put_object/upload_file methods.
