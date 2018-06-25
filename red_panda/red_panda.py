@@ -59,8 +59,10 @@ class RedPanda:
         debug: bool, if True, queries will be printed instead of executed.
 
     # References
+        - https://docs.aws.amazon.com/redshift/latest/dg/r_COPY.html for COPY
+        - https://docs.aws.amazon.com/redshift/latest/dg/r_UNLOAD.html for UNLOAD
         - https://github.com/getredash/redash for handling connections
-        - https://github.com/agawronski/pandas_redshift for `df_to_redshift`
+        - https://github.com/agawronski/pandas_redshift for inspiration
     """
     
     def __init__(self, redshift_config, s3_config=None, debug=False):
@@ -428,8 +430,7 @@ class RedPanda:
         escape=False,
         allowoverwrite=False,
         parallel='ON',
-        maxfilesize=None,
-        silent=False
+        maxfilesize=None
     ):
         """Run sql and unload result to S3
 
@@ -446,19 +447,42 @@ class RedPanda:
             of access_key_id/secret_access_key. This feature is untested.
 
             manifest: bool, whether or not to create the manifest file.
+
+            delimiter: str, delimiter charater if the output file is delimited.
+
+            fixedwidth: str, if not None, it will overwrite delimiter and use fixedwidth format
+            instead.
+            
+            encrypted: bool, whether or not the files should be encrypted.
+            
+            bzip2: bool, whether or not the files should be compressed with bzip2.
+            
+            gzip: bool, whether or not the files should be compressed with gzip.
+            
+            addquotes: bool, whether or not values with delimiter characters should be quoted.
+            
+            null: str, specify the NULL AS string.
+            
+            escape: bool, whether to include the ESCAPE argument in UNLOAD.
+            
+            allowoverwrite: bool, whether or not existing files should be overwritten. Redshift will
+            fail with error message if this is False and there are existing files.
+            
+            parallel: str, ON or OFF. Whether or not to use parallel and unload into multiple files.
+            
+            maxfilesize: str, maxfilesize argument for UNLOAD.
         """
         destination_option = ''
         if path is not None:
             destination_option = os.path.join(destination_option, f'{path}')
         if prefix is not None:
             destination_option = os.path.join(destination_option, f'{prefix}')
-        if not silent:
-            existing_keys = self._get_s3_pattern_existence(bucket, destination_option)
-            warn_message = f"""\
-            These keys already exist. May cause data consistency issues.
-            {existing_keys}
-            """
-            warnings.warn(dedent(warn_message))
+        existing_keys = self._get_s3_pattern_existence(bucket, destination_option)
+        warn_message = f"""\
+        These keys already exist. May cause data consistency issues.
+        {existing_keys}
+        """
+        warnings.warn(dedent(warn_message))
         destination_option = os.path.join(f's3://{bucket}', destination_option)
         if bzip2 and gzip:
             raise ValueError('Only one of [bzip2, gzip] should be True')
