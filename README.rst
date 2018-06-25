@@ -94,11 +94,11 @@ TODO
 
 In no particular order:
 
+- Support more data formats for copy. Currently only support delimited files.
 - Improve tests and docs.
 - Better ways of inferring data types from dataframe to Redshift.
 - Explore using `S3 Transfer Manager`'s upload_fileobj for `df_to_s3` to take advantage of automatic multipart upload.
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
-- Support more data formats.
 - Build cli to manage data outside of Python.
 - Support GCP?
 
