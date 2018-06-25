@@ -184,9 +184,24 @@ COPY_KWARGS = [
     'timeformat',
     'region',
     'null',
-    'escape',
-    'acceptinvchars',
+    'escape', # bool
+    'acceptinvchars', # bool
     'iam_role',
+]
+
+UNLOAD_KWARGS = [
+    'manifest', # bool
+    'delimiter',
+    'fixedwidth',
+    'encrypted', # bool
+    'bzip2', # bool
+    'gzip', # bool
+    'addquotes', # bool
+    'null',
+    'escap', # bool
+    'allowoverwrite', # bool
+    'parallel',
+    'maxfilesize',
 ]
 
 S3_PUT_KWARGS = [

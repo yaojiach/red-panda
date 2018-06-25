@@ -111,6 +111,11 @@ class RedPanda:
         if self._check_s3_key_existence(bucket, key):
             warnings.warn(f'{key} exists in {bucket}. May cause data consistency issues.')
 
+    def _get_s3_pattern_existence(self, bucket, pattern):
+        s3 = self._connect_s3()
+        all_keys = [o.key for o in s3.Bucket(bucket).objects.all() if o.key.startswith(pattern)]
+        return all_keys
+
     def _get_redshift_n_slices(self):
         """Get number of slices of a Redshift cluster"""
         data, _ = self.run_query('select count(1) from stv_slices', fetch=True)
@@ -303,7 +308,6 @@ class RedPanda:
             iam_role_option = ''
             access_key_id_option = f"access_key_id '{aws_access_key_id}'"
             secret_access_key_option = f"secret_access_key '{aws_secret_access_key}'"
-
         copy_template = f"""\
         copy {table_name}
         from '{s3_source}' 
@@ -393,12 +397,11 @@ class RedPanda:
             if cleanup:
                 self.delete_from_s3(bucket, s3_key)
 
-
     def redshift_to_df(self, sql):
         """Redshift results to Pandas DataFrame
 
         # Arguments
-            sql: String, SQL query
+            sql: str, SQL query
 
         # Returns
             DataFrame of query result
@@ -406,3 +409,110 @@ class RedPanda:
         data, columns = self.run_query(sql, fetch=True)
         data = pd.DataFrame(data, columns=columns)
         return data
+
+    def redshift_to_s3(
+        self, 
+        sql, 
+        bucket, 
+        path=None, 
+        prefix=None,
+        iam_role=None,
+        manifest=False,
+        delimiter='|',
+        fixedwidth=None,
+        encrypted=False,
+        bzip2=False,
+        gzip=False,
+        addquotes=True,
+        null=None,
+        escape=False,
+        allowoverwrite=False,
+        parallel='ON',
+        maxfilesize=None,
+        silent=False
+    ):
+        """Run sql and unload result to S3
+
+        # Arguments
+            sql: str, SQL query
+
+            bucket: str, S3 bucket name.
+            
+            key: str, S3 key. Create if does not exist.
+
+            prefix: str, prefix of the set of files.
+
+            iam_role: str, IAM Role string. If provided, this will be used as authorization instead
+            of access_key_id/secret_access_key. This feature is untested.
+
+            manifest: bool, whether or not to create the manifest file.
+        """
+        destination_option = ''
+        if path is not None:
+            destination_option = os.path.join(destination_option, f'{path}')
+        if prefix is not None:
+            destination_option = os.path.join(destination_option, f'{prefix}')
+        if not silent:
+            existing_keys = self._get_s3_pattern_existence(bucket, destination_option)
+            warn_message = f"""\
+            These keys already exist. May cause data consistency issues.
+            {existing_keys}
+            """
+            warnings.warn(dedent(warn_message))
+        destination_option = os.path.join(f's3://{bucket}', destination_option)
+        if bzip2 and gzip:
+            raise ValueError('Only one of [bzip2, gzip] should be True')
+        manifest_option = 'manifest' if manifest else ''
+        delimiter_option = f"delimiter '{delimiter}'"
+        if fixedwidth is not None:
+            fixedwidth_option = f"fixedwidth '{fixedwidth}'"
+            delimiter_option = ''
+        else:
+            fixedwidth_option = ''
+        encrypted_option = 'encrypted' if encrypted else ''
+        bzip2_option = 'bzip2' if bzip2 else ''
+        gzip_option = 'gzip' if gzip else ''
+        addquotes_option = 'addquotes' if addquotes else ''
+        null_option = f"null as '{null}'" if null is not None else ''
+        escape_option = 'escape' if escape else ''
+        allowoverwrite_option = 'allowoverwrite' if allowoverwrite else ''
+        parallel_option = f"parallel {parallel}"
+        maxfilesize_option = f"maxfilesize '{maxfilesize}'" if maxfilesize is not None else ''
+        aws_access_key_id = self.s3_config.get("aws_access_key_id")
+        aws_secret_access_key = self.s3_config.get("aws_secret_access_key")
+        if aws_access_key_id is None and aws_secret_access_key is None and iam_role is None:
+            raise ValueError(
+                'Must provide at least one of [iam_role, aws_access_key_id/aws_secret_access_key]'
+            )
+        aws_token = self.s3_config.get("aws_session_token")
+        aws_token_option = f"session_token '{aws_token}'" if aws_token is not None else ''
+        if iam_role is not None:
+            iam_role_option = f"iam_role '{iam_role}'"
+            access_key_id_option = ''
+            secret_access_key_option = ''
+        else:
+            iam_role_option = ''
+            access_key_id_option = f"access_key_id '{aws_access_key_id}'"
+            secret_access_key_option = f"secret_access_key '{aws_secret_access_key}'"
+        sql = sql.replace('\n', ' ')
+        unload_template = f"""\
+        unload ('{sql}')
+        to '{destination_option}'
+        {manifest_option}
+        {delimiter_option}
+        {fixedwidth_option}
+        {encrypted_option}
+        {bzip2_option}
+        {gzip_option}
+        {addquotes_option}
+        {null_option}
+        {escape_option}
+        {allowoverwrite_option}
+        {parallel_option}
+        {maxfilesize_option}
+        {access_key_id_option}
+        {secret_access_key_option}
+        {aws_token_option}
+        {iam_role_option}
+        """
+        self.run_query(unload_template)
