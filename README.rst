@@ -104,11 +104,11 @@ In no particular order:
 
 In progress:
 
-- Unload from Redshift to S3.
 - Take advantage of Redshift slices for parallel processing. Split files for COPY.
 
 Done:
 
+- Unload from Redshift to S3.
 - Handle when user does have implicit column that is the index in a DataFrame. Currently index is automatically dropped.
 - Add encryption options for files uploaded to S3.
 
