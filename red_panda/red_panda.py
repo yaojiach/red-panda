@@ -10,7 +10,7 @@ import psycopg2
 import boto3
 import botocore
 
-from red_panda.constants import RESERVED_WORDS, TOCSV_KWARGS, COPY_KWARGS, TYPES_MAP
+from red_panda.constants import RESERVED_WORDS, TOCSV_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, TYPES_MAP
 from red_panda.errors import ReservedWordError
 
 
@@ -42,6 +42,10 @@ def check_invalid_columns(columns):
         raise ReservedWordError('Redshift reserved words: f{invalid_df_col_names}')
 
 
+def filter_kwargs(full, ref):
+    return {k: v for k, v in full.items() if k in ref}
+
+
 class RedPanda:
     """Class for operations between Pandas and Redshift
 
@@ -60,6 +64,12 @@ class RedPanda:
     """
     
     def __init__(self, redshift_config, s3_config=None, debug=False):
+        if s3_config is None:
+            s3_config = {
+                'aws_access_key_id': None,
+                'aws_secret_access_key': None,
+                'aws_session_token': None,
+            }
         self.redshift_config = redshift_config
         self.s3_config = s3_config
         self._debug = debug
@@ -75,6 +85,11 @@ class RedPanda:
         return connection
 
     def _connect_s3(self):
+        """Get S3 session
+
+        If key/secret are not provided, boto3's default behavior is falling back to awscli configs
+        and environment variables.
+        """
         s3 = boto3.resource(
             's3',
             aws_access_key_id=self.s3_config.get('aws_access_key_id'),
@@ -159,15 +174,18 @@ class RedPanda:
             bucket: str, S3 bucket name.
         
             key: str, S3 key.
+
+            kwargs: kwargs for boto3.Bucket.put_object(); kwargs to pandas.DataFrame.to_csv();
         """
         s3 = self._connect_s3()
         buffer = StringIO()
-        to_csv_kwargs = {k: v for k, v in kwargs.items() if k in TOCSV_KWARGS}
+        to_csv_kwargs = filter_kwargs(kwargs, TOCSV_KWARGS)
         df.to_csv(buffer, **to_csv_kwargs)
         self._warn_s3_key_existence(bucket, key)
-        s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue())
+        s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
+        s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
 
-    def file_to_s3(self, file_name, bucket, key):
+    def file_to_s3(self, file_name, bucket, key, **kwargs):
         """Put a file to S3
 
         # Arguments
@@ -176,10 +194,13 @@ class RedPanda:
             bucket: str, S3 bucket name.
         
             key: str, S3 key.
+
+            kwargs: ExtraArgs for boto3.client.upload_file();
         """
         s3 = self._connect_s3()
         self._warn_s3_key_existence(bucket, key)
-        s3.meta.client.upload_file(file_name, Bucket=bucket, Key=key)       
+        s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
+        s3.meta.client.upload_file(file_name, Bucket=bucket, Key=key, ExtraArgs=s3_put_kwargs)       
 
     def delete_from_s3(self, bucket, key, silent=True):
         """Delete object from S3
@@ -211,7 +232,8 @@ class RedPanda:
         acceptinvchars=True,
         escape=False,
         null=None,
-        region=None
+        region=None,
+        iam_role=None
     ):
         """Load S3 file into Redshift
 
@@ -245,6 +267,8 @@ class RedPanda:
             null: str, specify the NULL AS string.
             
             region: str, S3 region.
+
+            iam_role: str, use IAM Role for access control. This feature is untested.
         """
         if not append:
             if column_definition is None:
@@ -263,8 +287,23 @@ class RedPanda:
         escape_option = 'escape' if escape else ''
         acceptinvchars_option = 'acceptinvchars' if acceptinvchars else ''
         null_option = f"null as '{null}'" if null is not None else ''
+        aws_access_key_id = self.s3_config.get("aws_access_key_id")
+        aws_secret_access_key = self.s3_config.get("aws_secret_access_key")
+        if aws_access_key_id is None and aws_secret_access_key is None and iam_role is None:
+            raise ValueError(
+                'Must provide at least one of [iam_role, aws_access_key_id/aws_secret_access_key]'
+            )
         aws_token = self.s3_config.get("aws_session_token")
         aws_token_option = f"session_token '{aws_token}'" if aws_token is not None else ''
+        if iam_role is not None:
+            iam_role_option = f"iam_role '{iam_role}'"
+            access_key_id_option = ''
+            secret_access_key_option = ''
+        else:
+            iam_role_option = ''
+            access_key_id_option = f"access_key_id '{aws_access_key_id}'"
+            secret_access_key_option = f"secret_access_key '{aws_secret_access_key}'"
+
         copy_template = f"""\
         copy {table_name}
         from '{s3_source}' 
@@ -276,9 +315,10 @@ class RedPanda:
         ignoreheader {ignoreheader}
         dateformat '{dateformat}'
         timeformat '{timeformat}'
-        access_key_id '{self.s3_config.get("aws_access_key_id")}'
-        secret_access_key '{self.s3_config.get("aws_secret_access_key")}'
+        {access_key_id_option}
+        {secret_access_key_option}
         {aws_token_option}
+        {iam_role_option}
         {region_option}
         """
         self.run_query(copy_template)
@@ -319,8 +359,8 @@ class RedPanda:
             kwargs: keyword arguments to pass to Pandas `to_csv` and Redshift COPY. See 
             red_panda.constants for all implemented arguments.
         """
-        to_csv_kwargs = {k: v for k, v in kwargs.items() if k in TOCSV_KWARGS}
-        copy_kwargs = {k: v for k, v in kwargs.items() if k in COPY_KWARGS}
+        to_csv_kwargs = filter_kwargs(kwargs, TOCSV_KWARGS)
+        copy_kwargs = filter_kwargs(kwargs, COPY_KWARGS)
         
         if column_definition is None:
             column_definition = map_types(OrderedDict(df.dtypes))
@@ -340,16 +380,18 @@ class RedPanda:
             file_name = f'redpanda-{int(time.time())}'
         s3_key = os.path.join(path if path is not None else '', file_name)
         self.df_to_s3(df, bucket=bucket, key=s3_key, **to_csv_kwargs)
-        self.s3_to_redshift(
-            bucket,
-            s3_key,
-            table_name,
-            column_definition=column_definition,
-            append=append,
-            **copy_kwargs
-        )
-        if cleanup:
-            self.delete_from_s3(bucket, s3_key)
+        try:
+            self.s3_to_redshift(
+                bucket,
+                s3_key,
+                table_name,
+                column_definition=column_definition,
+                append=append,
+                **copy_kwargs
+            )
+        finally:
+            if cleanup:
+                self.delete_from_s3(bucket, s3_key)
 
 
     def redshift_to_df(self, sql):

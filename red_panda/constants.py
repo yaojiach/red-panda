@@ -186,6 +186,34 @@ COPY_KWARGS = [
     'null',
     'escape',
     'acceptinvchars',
+    'iam_role',
+]
+
+S3_PUT_KWARGS = [
+    'ACL',
+    # 'Body', required in our context and handled seperately
+    'CacheControl',
+    'ContentDisposition',
+    'ContentEncoding',
+    'ContentLanguage',
+    'ContentLength',
+    'ContentMD5',
+    'ContentType',
+    'Expires',
+    'GrantFullControl',
+    'GrantRead',
+    'GrantReadACP',
+    'GrantWriteACP',
+    # 'Key', required and handled seperately
+    'Metadata',
+    'ServerSideEncryption',
+    'StorageClass',
+    'WebsiteRedirectLocation',
+    'SSECustomerAlgorithm',
+    'SSECustomerKey',
+    'SSEKMSKeyId',
+    'RequestPayer',
+    'Tagging',
 ]
 
 TYPES_MAP = {
