@@ -104,6 +104,7 @@ In no particular order:
 
 In progress:
 
+- Unload from Redshift to S3.
 - Take advantage of Redshift slices for parallel processing. Split files for COPY.
 
 Done:
