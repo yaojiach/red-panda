@@ -97,7 +97,6 @@ In no particular order:
 - Improve tests and docs.
 - Better ways of inferring data types from dataframe to Redshift.
 - Explore using `S3 Transfer Manager`'s upload_fileobj for `df_to_s3` to take advantage of automatic multipart upload.
-- Add encryption options for files uploaded to S3.
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
 - Support more data formats.
 - Build cli to manage data outside of Python.
@@ -110,3 +109,5 @@ In progress:
 Done:
 
 - Handle when user does have implicit column that is the index in a DataFrame. Currently index is automatically dropped.
+- Add encryption options for files uploaded to S3.
+    - By adding support for all kwargs for s3 put_object/upload_file methods.
