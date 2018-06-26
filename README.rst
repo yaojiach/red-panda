@@ -3,6 +3,12 @@ Red Panda 🐼😊
 
 Data science on AWS without frustration.
 
+Caveats:
+--------
+
+This package only works with Python >= 3.6 because of the heavy reliance on f-strings.
+
+
 Features
 --------
 
