@@ -6,7 +6,7 @@ Data science on AWS without frustration.
 Caveat:
 -------
 
-This package only works with Python >= 3.6 because of the heavy reliance on `f-string <http://www.python.org/>`_.
+This package only works with Python >= 3.6 because of the heavy reliance on `f-string <https://www.python.org/dev/peps/pep-0498/>`_.
 
 
 Features
