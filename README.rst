@@ -3,10 +3,10 @@ Red Panda 🐼😊
 
 Data science on AWS without frustration.
 
-Caveats:
---------
+Caveat:
+-------
 
-This package only works with Python >= 3.6 because of the heavy reliance on f-strings.
+This package only works with Python >= 3.6 because of the heavy reliance on `f-string <http://www.python.org/>`_.
 
 
 Features
@@ -28,7 +28,7 @@ Installation
 Using red-panda
 ---------------
 
-Import `red-panda` and create an instance of `RedPanda`. If you create the instance with `debug` on (i.e. `rp = RedPanda(redshift_conf, s3_conf, debug=True)`), `red-panda` will print the planned queries instead of executing them.
+Import ``red-panda`` and create an instance of ``RedPanda``. If you create the instance with ``debug`` on (i.e. ``rp = RedPanda(redshift_conf, s3_conf, debug=True)``), ``red-panda`` will print the planned queries instead of executing them.
 
 .. code-block:: python
 
@@ -70,19 +70,26 @@ It is also possible to:
 - Upload a DataFrame or flat file to S3
 - Delete files from S3
 - Load S3 data into Redshift
+- Unload a Redshift query result to S3
+- Obtain a Redshift query result as a DataFrame
+- Run queries on Redshift
 
 
 .. code-block:: python
 
     s3_key = s3_path + '/' + s3_file_name
+    
+    # DataFrame uploaded to S3
     rp.df_to_s3(df, s3_bucket, s3_key)
     
+    # Delete a file on S3
     rp.delete_from_s3(s3_bucket, s3_key)
     
+    # Upload a local file to S3
     pd.to_csv(df, 'test_data.csv', index=False)
     rp.file_to_s3('test_data.csv', s3_bucket, s3_key)
 
-
+    # Populate a Redshift table from S3 files
     redshift_column_datatype = {
         'col1': 'int',
         'col2': 'int',
@@ -90,6 +97,16 @@ It is also possible to:
     rp.s3_to_redshift(
         s3_bucket, s3_key, 'test_table', column_definition=redshift_column_datatype
     )
+
+    # Unload Redshift query result to S3
+    sql = 'select * from test_table'
+    rp.redshift_to_s3(sql, s3_bucket, s3_path+'/unload', prefix='unloadtest_')
+
+    # Obtain Redshift query result as a DataFrame
+    df = rp.redshift_to_df('select * from test_table')
+
+    # Run queries on Redshift
+    rp.run_query('create table test_table_copy as select * from test_table')
 
 
 For API documentation, visit https://red-panda.readthedocs.io/en/latest/.
@@ -103,7 +120,7 @@ In no particular order:
 - Support more data formats for copy. Currently only support delimited files.
 - Improve tests and docs.
 - Better ways of inferring data types from dataframe to Redshift.
-- Explore using `S3 Transfer Manager`'s upload_fileobj for `df_to_s3` to take advantage of automatic multipart upload.
+- Explore using ``S3 Transfer Manager``'s upload_fileobj for ``df_to_s3`` to take advantage of automatic multipart upload.
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
 - Build cli to manage data outside of Python.
 - Support GCP?
