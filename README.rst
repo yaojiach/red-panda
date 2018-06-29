@@ -3,8 +3,8 @@ Red Panda 🐼😊
 
 Data science on AWS without frustration.
 
-Caveat:
--------
+Caveat
+------
 
 This package only works with Python >= 3.6 because of the heavy reliance on `f-string <https://www.python.org/dev/peps/pep-0498/>`_.
 
@@ -126,9 +126,10 @@ TODO
 In no particular order:
 
 - Support more data formats for copy. Currently only support delimited files.
+- Support more data formats for s3 to df. Currently only support delimited files.
 - Improve tests and docs.
 - Better ways of inferring data types from dataframe to Redshift.
-- Explore using ``S3 Transfer Manager``'s upload_fileobj for ``df_to_s3`` to take advantage of automatic multipart upload.
+- Explore using ``S3 Transfer Manager``'s ``upload_fileobj`` for ``df_to_s3`` to take advantage of automatic multipart upload.
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
 - Build cli to manage data outside of Python.
 - Support GCP?
