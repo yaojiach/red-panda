@@ -231,6 +231,27 @@ S3_PUT_KWARGS = [
     'Tagging',
 ]
 
+S3_GET_KWARGS = [
+    'Bucket',
+    'IfMatch',
+    'IfModifiedSince',
+    'IfNoneMatch',
+    'IfUnmodifiedSince',
+    'Key',
+    'Range',
+    'ResponseCacheControl',
+    'ResponseContentDisposition',
+    'ResponseContentEncoding',
+    'ResponseContentLanguage',
+    'ResponseContentType',
+    'ResponseExpires',
+    'VersionId',
+    'SSECustomerAlgorithm',
+    'SSECustomerKey',
+    'RequestPayer',
+    'PartNumber',
+]
+
 TYPES_MAP = {
     'O': 'varchar(256)',
     'object': 'varchar(256)',

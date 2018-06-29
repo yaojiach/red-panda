@@ -2,7 +2,7 @@
 import os
 import warnings
 from collections import OrderedDict
-from io import StringIO
+from io import StringIO, BytesIO
 from textwrap import dedent
 
 import pandas as pd
@@ -10,7 +10,9 @@ import psycopg2
 import boto3
 import botocore
 
-from red_panda.constants import RESERVED_WORDS, TOCSV_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, TYPES_MAP
+from red_panda.constants import (
+    RESERVED_WORDS, TOCSV_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, S3_GET_KWARGS, TYPES_MAP
+)
 from red_panda.errors import ReservedWordError
 
 
@@ -182,7 +184,7 @@ class RedPanda:
         
             key: str, S3 key.
 
-            kwargs: kwargs for boto3.Bucket.put_object(); kwargs to pandas.DataFrame.to_csv();
+            kwargs: kwargs for boto3.Bucket.put_object(); kwargs to pandas.DataFrame.to_csv().
         """
         s3 = self._connect_s3()
         buffer = StringIO()
@@ -202,7 +204,7 @@ class RedPanda:
         
             key: str, S3 key.
 
-            kwargs: ExtraArgs for boto3.client.upload_file();
+            kwargs: ExtraArgs for boto3.client.upload_file().
         """
         s3 = self._connect_s3()
         self._warn_s3_key_existence(bucket, key)
@@ -540,3 +542,32 @@ class RedPanda:
         {iam_role_option}
         """
         self.run_query(unload_template)
+
+    def s3_to_df(self, bucket, key, **kwargs):
+        """
+        # Arguments:
+            bucket: str, S3 bucket name.
+        
+            key: str, S3 key.
+
+            kwargs: Defined kwargs for boto3.client.get_object().
+        """
+        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
+        s3 = self.get_s3_client()
+        obj = s3.get_object(Bucket=bucket, Key=key, **s3_get_kwargs)
+        return pd.read_csv(BytesIO(obj['Body'].read()))
+
+    def s3_to_file(self, bucket, key, file_name, **kwargs):
+        """
+        # Arguments:
+            bucket: str, S3 bucket name.
+        
+            key: str, S3 key.
+
+            file_name: str, local file name.
+
+            kwargs: Defined kwargs for boto3.client.download_file().
+        """
+        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
+        s3 = self.get_s3_resource()
+        s3.Bucket(bucket).download_file(Key=key, Filename=file_name, ExtraArgs=s3_get_kwargs)
