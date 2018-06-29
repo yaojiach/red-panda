@@ -11,7 +11,8 @@ import boto3
 import botocore
 
 from red_panda.constants import (
-    RESERVED_WORDS, TOCSV_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, S3_GET_KWARGS, TYPES_MAP
+    RESERVED_WORDS, TOCSV_KWARGS, READ_TABLE_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, S3_GET_KWARGS, 
+    TYPES_MAP
 )
 from red_panda.errors import ReservedWordError
 
@@ -543,8 +544,9 @@ class RedPanda:
         """
         self.run_query(unload_template)
 
-    def s3_to_df(self, bucket, key, **kwargs):
-        """
+    def s3_to_obj(self, bucket, key, **kwargs):
+        """Read S3 object into memory as BytesIO
+
         # Arguments:
             bucket: str, S3 bucket name.
         
@@ -555,7 +557,24 @@ class RedPanda:
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
         s3 = self.get_s3_client()
         obj = s3.get_object(Bucket=bucket, Key=key, **s3_get_kwargs)
-        return pd.read_csv(BytesIO(obj['Body'].read()))
+        return BytesIO(obj['Body'].read())
+
+    def s3_to_df(self, bucket, key, **kwargs):
+        """Read S3 object into memory as DataFrame
+
+        Only supporting delimited files. Default is tab delimited files.
+
+        # Arguments:
+            bucket: str, S3 bucket name.
+        
+            key: str, S3 key.
+
+            kwargs: Defined kwargs for pandas.read_table() and boto3.client.get_object().
+        """
+        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
+        read_table_kwargs = filter_kwargs(kwargs, READ_TABLE_KWARGS)
+        buffer = self.s3_to_obj(bucket, key, **s3_get_kwargs)
+        return pd.read_table(buffer, **read_table_kwargs)
 
     def s3_to_file(self, bucket, key, file_name, **kwargs):
         """
