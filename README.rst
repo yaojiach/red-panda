@@ -73,6 +73,8 @@ It is also possible to:
 - Unload a Redshift query result to S3
 - Obtain a Redshift query result as a DataFrame
 - Run queries on Redshift
+- Download S3 file to local
+- Read S3 file in memory as DataFrame
 
 
 .. code-block:: python
@@ -107,6 +109,12 @@ It is also possible to:
 
     # Run queries on Redshift
     rp.run_query('create table test_table_copy as select * from test_table')
+
+    # Download S3 file to local
+    rp.s3_to_file(s3_bucket, s3_key, 'local_file_name.csv')
+
+    # Read S3 file in memory as DataFrame
+    df = rp.s3_to_df(s3_bucket, s3_key, delimiter=',') # csv file in this example
 
 
 For API documentation, visit https://red-panda.readthedocs.io/en/latest/.
