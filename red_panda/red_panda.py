@@ -15,7 +15,7 @@ from red_panda.constants import (
     TYPES_MAP
 )
 from red_panda.redshift_admin_templates import (
-    SQL_NUM_SLICES, SQL_TABLE_INFO
+    SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS
 )
 from red_panda.errors import ReservedWordError
 
@@ -115,12 +115,18 @@ class RedshiftUtils:
             print('Could not derive number of slices of Redshift cluster.')
         return n_slices
 
-    def get_table_info(self, as_df=False):
-        data, columns = self.run_query(SQL_TABLE_INFO, fetch=True)
+    def run_template(self, sql, as_df=True):
+        data, columns = self.run_query(sql, fetch=True)
         if as_df:
             return pd.DataFrame(data, columns=columns)
         else:
             return (data, columns)
+
+    def get_table_info(self, as_df=True):
+        return self.run_template(SQL_TABLE_INFO, as_df)
+
+    def get_load_error(self, as_df=True):
+        return self.run_template(SQL_LOAD_ERRORS, as_df)
 
     def redshift_to_df(self, sql):
         """Redshift results to Pandas DataFrame
