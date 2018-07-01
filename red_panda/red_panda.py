@@ -49,36 +49,13 @@ def filter_kwargs(full, ref):
     return {k: v for k, v in full.items() if k in ref}
 
 
-class RedPanda:
-    """Class for operations between Pandas and Redshift
-
-    Solves interoperability between Pandas and Redshift through csv ingestion via S3.
-
-    # Arguments
-        redshift_conf: dict, Redshift configuration.
-    
-        s3_conf: dict, S3 configuration.
-
-        debug: bool, if True, queries will be printed instead of executed.
-
-    # References
-        - https://docs.aws.amazon.com/redshift/latest/dg/r_COPY.html for COPY
-        - https://docs.aws.amazon.com/redshift/latest/dg/r_UNLOAD.html for UNLOAD
-        - https://github.com/getredash/redash for handling connections
-        - https://github.com/agawronski/pandas_redshift for inspiration
+class RedshiftUtils:
+    """ Base class for Redshift operations
     """
-    
-    def __init__(self, redshift_config, s3_config=None, debug=False):
-        if s3_config is None:
-            s3_config = {
-                'aws_access_key_id': None,
-                'aws_secret_access_key': None,
-                'aws_session_token': None,
-            }
+    def __init__(self, redshift_config, debug=False):
         self.redshift_config = redshift_config
-        self.s3_config = s3_config
         self._debug = debug
-    
+
     def _connect_redshift(self):
         connection = psycopg2.connect(
             user=self.redshift_config.get('user'),
@@ -89,39 +66,7 @@ class RedPanda:
         )
         return connection
 
-    def _connect_s3(self):
-        """Get S3 session
-
-        If key/secret are not provided, boto3's default behavior is falling back to awscli configs
-        and environment variables.
-        """
-        s3 = boto3.resource(
-            's3',
-            aws_access_key_id=self.s3_config.get('aws_access_key_id'),
-            aws_secret_access_key=self.s3_config.get('aws_secret_access_key'),
-            aws_session_token=self.s3_config.get('aws_session_token')
-        )
-        return s3
-
-    def _check_s3_key_existence(self, bucket, key):
-        s3 = self._connect_s3()
-        try:
-            s3.meta.client.head_object(Bucket=bucket, Key=key)
-        except botocore.errorfactory.ClientError:
-            return False
-        else:
-            return True
-
-    def _warn_s3_key_existence(self, bucket, key):
-        if self._check_s3_key_existence(bucket, key):
-            warnings.warn(f'{key} exists in {bucket}. May cause data consistency issues.')
-
-    def _get_s3_pattern_existence(self, bucket, pattern):
-        s3 = self._connect_s3()
-        all_keys = [o.key for o in s3.Bucket(bucket).objects.all() if o.key.startswith(pattern)]
-        return all_keys
-
-    def _get_redshift_n_slices(self):
+    def get_num_slices(self):
         """Get number of slices of a Redshift cluster"""
         data, _ = self.run_query('select count(1) from stv_slices', fetch=True)
         try:
@@ -129,14 +74,6 @@ class RedPanda:
         except IndexError:
             print('Could not derive number of slices of Redshift cluster.')
         return n_slices
-
-    def get_s3_resource(self):
-        """Return a boto3 S3 resource"""
-        return self._connect_s3()
-    
-    def get_s3_client(self):
-        """Return a boto3 S3 client"""
-        return self._connect_s3().meta.client
 
     def run_query(self, sql, fetch=False):
         """Run generic SQL
@@ -174,6 +111,82 @@ class RedPanda:
         finally:
             conn.close()
         return (data, columns)
+
+class S3Utils:
+    """ Base class for S3 operations
+    """
+    def __init__(self, s3_config):
+        if s3_config is None:
+            s3_config = {
+                'aws_access_key_id': None,
+                'aws_secret_access_key': None,
+                'aws_session_token': None,
+            }
+        self.s3_config = s3_config
+
+    def _connect_s3(self):
+        """Get S3 session
+
+        If key/secret are not provided, boto3's default behavior is falling back to awscli configs
+        and environment variables.
+        """
+        s3 = boto3.resource(
+            's3',
+            aws_access_key_id=self.s3_config.get('aws_access_key_id'),
+            aws_secret_access_key=self.s3_config.get('aws_secret_access_key'),
+            aws_session_token=self.s3_config.get('aws_session_token')
+        )
+        return s3
+    
+    def _check_s3_key_existence(self, bucket, key):
+        s3 = self._connect_s3()
+        try:
+            s3.meta.client.head_object(Bucket=bucket, Key=key)
+        except botocore.errorfactory.ClientError:
+            return False
+        else:
+            return True
+
+    def _warn_s3_key_existence(self, bucket, key):
+        if self._check_s3_key_existence(bucket, key):
+            warnings.warn(f'{key} exists in {bucket}. May cause data consistency issues.')
+
+    def _get_s3_pattern_existence(self, bucket, pattern):
+        s3 = self._connect_s3()
+        all_keys = [o.key for o in s3.Bucket(bucket).objects.all() if o.key.startswith(pattern)]
+        return all_keys
+
+    def get_s3_resource(self):
+        """Return a boto3 S3 resource"""
+        return self._connect_s3()
+    
+    def get_s3_client(self):
+        """Return a boto3 S3 client"""
+        return self._connect_s3().meta.client
+
+
+class RedPanda(RedshiftUtils, S3Utils):
+    """Class for operations between Pandas and Redshift/S3
+
+    Solves interoperability between Pandas and Redshift through csv ingestion via S3.
+
+    # Arguments
+        redshift_conf: dict, Redshift configuration.
+    
+        s3_conf: dict, S3 configuration.
+
+        debug: bool, if True, queries will be printed instead of executed.
+
+    # References
+        - https://docs.aws.amazon.com/redshift/latest/dg/r_COPY.html for COPY
+        - https://docs.aws.amazon.com/redshift/latest/dg/r_UNLOAD.html for UNLOAD
+        - https://github.com/getredash/redash for handling connections
+        - https://github.com/agawronski/pandas_redshift for inspiration
+    """
+    
+    def __init__(self, redshift_config, s3_config=None, debug=False):
+        RedshiftUtils.__init__(self, redshift_config, debug)
+        S3Utils.__init__(self, s3_config)
 
     def df_to_s3(self, df, bucket, key, **kwargs):
         """Put DataFrame to S3
