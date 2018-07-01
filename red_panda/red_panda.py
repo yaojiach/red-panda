@@ -66,15 +66,6 @@ class RedshiftUtils:
         )
         return connection
 
-    def get_num_slices(self):
-        """Get number of slices of a Redshift cluster"""
-        data, _ = self.run_query('select count(1) from stv_slices', fetch=True)
-        try:
-            n_slices = data[0][0]
-        except IndexError:
-            print('Could not derive number of slices of Redshift cluster.')
-        return n_slices
-
     def run_query(self, sql, fetch=False):
         """Run generic SQL
 
@@ -111,6 +102,29 @@ class RedshiftUtils:
         finally:
             conn.close()
         return (data, columns)
+
+    def get_num_slices(self):
+        """Get number of slices of a Redshift cluster"""
+        data, _ = self.run_query('select count(1) from stv_slices', fetch=True)
+        try:
+            n_slices = data[0][0]
+        except IndexError:
+            print('Could not derive number of slices of Redshift cluster.')
+        return n_slices
+
+    def redshift_to_df(self, sql):
+        """Redshift results to Pandas DataFrame
+
+        # Arguments
+            sql: str, SQL query
+
+        # Returns
+            DataFrame of query result
+        """
+        data, columns = self.run_query(sql, fetch=True)
+        data = pd.DataFrame(data, columns=columns)
+        return data
+
 
 class S3Utils:
     """ Base class for S3 operations
@@ -164,6 +178,105 @@ class S3Utils:
         """Return a boto3 S3 client"""
         return self._connect_s3().meta.client
 
+    def file_to_s3(self, file_name, bucket, key, **kwargs):
+        """Put a file to S3
+
+        # Arguments
+            file_name: str, path to file.
+        
+            bucket: str, S3 bucket name.
+        
+            key: str, S3 key.
+
+            kwargs: ExtraArgs for boto3.client.upload_file().
+        """
+        s3 = self._connect_s3()
+        self._warn_s3_key_existence(bucket, key)
+        s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
+        s3.meta.client.upload_file(file_name, Bucket=bucket, Key=key, ExtraArgs=s3_put_kwargs)       
+
+    def df_to_s3(self, df, bucket, key, **kwargs):
+        """Put DataFrame to S3
+        
+        # Arguments
+            df: pandas.DataFrame, source dataframe.
+        
+            bucket: str, S3 bucket name.
+        
+            key: str, S3 key.
+
+            kwargs: kwargs for boto3.Bucket.put_object(); kwargs to pandas.DataFrame.to_csv().
+        """
+        s3 = self._connect_s3()
+        buffer = StringIO()
+        to_csv_kwargs = filter_kwargs(kwargs, TOCSV_KWARGS)
+        df.to_csv(buffer, **to_csv_kwargs)
+        self._warn_s3_key_existence(bucket, key)
+        s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
+        s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
+
+    def delete_from_s3(self, bucket, key, silent=True):
+        """Delete object from S3
+
+        # Arguments
+            bucket: str, S3 bucket name.
+        
+            key: str, S3 key.
+        """
+        s3 = self._connect_s3()
+        if self._check_s3_key_existence(bucket, key):
+            s3.meta.client.delete_object(Bucket=bucket, Key=key)
+        else:
+            if not silent:
+                print(f'{bucket}: {key} does not exist.')
+    
+    def s3_to_obj(self, bucket, key, **kwargs):
+        """Read S3 object into memory as BytesIO
+
+        # Arguments:
+            bucket: str, S3 bucket name.
+        
+            key: str, S3 key.
+
+            kwargs: Defined kwargs for boto3.client.get_object().
+        """
+        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
+        s3 = self.get_s3_client()
+        obj = s3.get_object(Bucket=bucket, Key=key, **s3_get_kwargs)
+        return BytesIO(obj['Body'].read())
+
+    def s3_to_file(self, bucket, key, file_name, **kwargs):
+        """
+        # Arguments:
+            bucket: str, S3 bucket name.
+        
+            key: str, S3 key.
+
+            file_name: str, local file name.
+
+            kwargs: Defined kwargs for boto3.client.download_file().
+        """
+        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
+        s3 = self.get_s3_resource()
+        s3.Bucket(bucket).download_file(Key=key, Filename=file_name, ExtraArgs=s3_get_kwargs)
+
+    def s3_to_df(self, bucket, key, **kwargs):
+        """Read S3 object into memory as DataFrame
+
+        Only supporting delimited files. Default is tab delimited files.
+
+        # Arguments:
+            bucket: str, S3 bucket name.
+        
+            key: str, S3 key.
+
+            kwargs: Defined kwargs for pandas.read_table() and boto3.client.get_object().
+        """
+        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
+        read_table_kwargs = filter_kwargs(kwargs, READ_TABLE_KWARGS)
+        buffer = self.s3_to_obj(bucket, key, **s3_get_kwargs)
+        return pd.read_table(buffer, **read_table_kwargs)
+
 
 class RedPanda(RedshiftUtils, S3Utils):
     """Class for operations between Pandas and Redshift/S3
@@ -187,58 +300,6 @@ class RedPanda(RedshiftUtils, S3Utils):
     def __init__(self, redshift_config, s3_config=None, debug=False):
         RedshiftUtils.__init__(self, redshift_config, debug)
         S3Utils.__init__(self, s3_config)
-
-    def df_to_s3(self, df, bucket, key, **kwargs):
-        """Put DataFrame to S3
-        
-        # Arguments
-            df: pandas.DataFrame, source dataframe.
-        
-            bucket: str, S3 bucket name.
-        
-            key: str, S3 key.
-
-            kwargs: kwargs for boto3.Bucket.put_object(); kwargs to pandas.DataFrame.to_csv().
-        """
-        s3 = self._connect_s3()
-        buffer = StringIO()
-        to_csv_kwargs = filter_kwargs(kwargs, TOCSV_KWARGS)
-        df.to_csv(buffer, **to_csv_kwargs)
-        self._warn_s3_key_existence(bucket, key)
-        s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
-        s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
-
-    def file_to_s3(self, file_name, bucket, key, **kwargs):
-        """Put a file to S3
-
-        # Arguments
-            file_name: str, path to file.
-        
-            bucket: str, S3 bucket name.
-        
-            key: str, S3 key.
-
-            kwargs: ExtraArgs for boto3.client.upload_file().
-        """
-        s3 = self._connect_s3()
-        self._warn_s3_key_existence(bucket, key)
-        s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
-        s3.meta.client.upload_file(file_name, Bucket=bucket, Key=key, ExtraArgs=s3_put_kwargs)       
-
-    def delete_from_s3(self, bucket, key, silent=True):
-        """Delete object from S3
-
-        # Arguments
-            bucket: str, S3 bucket name.
-        
-            key: str, S3 key.
-        """
-        s3 = self._connect_s3()
-        if self._check_s3_key_existence(bucket, key):
-            s3.meta.client.delete_object(Bucket=bucket, Key=key)
-        else:
-            if not silent:
-                print(f'{bucket}: {key} does not exist.')
 
     def s3_to_redshift(
         self, 
@@ -415,19 +476,6 @@ class RedPanda(RedshiftUtils, S3Utils):
             if cleanup:
                 self.delete_from_s3(bucket, s3_key)
 
-    def redshift_to_df(self, sql):
-        """Redshift results to Pandas DataFrame
-
-        # Arguments
-            sql: str, SQL query
-
-        # Returns
-            DataFrame of query result
-        """
-        data, columns = self.run_query(sql, fetch=True)
-        data = pd.DataFrame(data, columns=columns)
-        return data
-
     def redshift_to_s3(
         self, 
         sql, 
@@ -556,50 +604,3 @@ class RedPanda(RedshiftUtils, S3Utils):
         {iam_role_option}
         """
         self.run_query(unload_template)
-
-    def s3_to_obj(self, bucket, key, **kwargs):
-        """Read S3 object into memory as BytesIO
-
-        # Arguments:
-            bucket: str, S3 bucket name.
-        
-            key: str, S3 key.
-
-            kwargs: Defined kwargs for boto3.client.get_object().
-        """
-        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
-        s3 = self.get_s3_client()
-        obj = s3.get_object(Bucket=bucket, Key=key, **s3_get_kwargs)
-        return BytesIO(obj['Body'].read())
-
-    def s3_to_df(self, bucket, key, **kwargs):
-        """Read S3 object into memory as DataFrame
-
-        Only supporting delimited files. Default is tab delimited files.
-
-        # Arguments:
-            bucket: str, S3 bucket name.
-        
-            key: str, S3 key.
-
-            kwargs: Defined kwargs for pandas.read_table() and boto3.client.get_object().
-        """
-        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
-        read_table_kwargs = filter_kwargs(kwargs, READ_TABLE_KWARGS)
-        buffer = self.s3_to_obj(bucket, key, **s3_get_kwargs)
-        return pd.read_table(buffer, **read_table_kwargs)
-
-    def s3_to_file(self, bucket, key, file_name, **kwargs):
-        """
-        # Arguments:
-            bucket: str, S3 bucket name.
-        
-            key: str, S3 key.
-
-            file_name: str, local file name.
-
-            kwargs: Defined kwargs for boto3.client.download_file().
-        """
-        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
-        s3 = self.get_s3_resource()
-        s3.Bucket(bucket).download_file(Key=key, Filename=file_name, ExtraArgs=s3_get_kwargs)
