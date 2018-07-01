@@ -14,6 +14,9 @@ from red_panda.constants import (
     RESERVED_WORDS, TOCSV_KWARGS, READ_TABLE_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, S3_GET_KWARGS, 
     TYPES_MAP
 )
+from red_panda.redshift_admin_templates import (
+    SQL_NUM_SLICES, SQL_TABLE_INFO
+)
 from red_panda.errors import ReservedWordError
 
 
@@ -105,12 +108,19 @@ class RedshiftUtils:
 
     def get_num_slices(self):
         """Get number of slices of a Redshift cluster"""
-        data, _ = self.run_query('select count(1) from stv_slices', fetch=True)
+        data, _ = self.run_query(SQL_NUM_SLICES, fetch=True)
         try:
             n_slices = data[0][0]
         except IndexError:
             print('Could not derive number of slices of Redshift cluster.')
         return n_slices
+
+    def get_table_info(self, as_df=False):
+        data, columns = self.run_query(SQL_TABLE_INFO, fetch=True)
+        if as_df:
+            return pd.DataFrame(data, columns=columns)
+        else:
+            return (data, columns)
 
     def redshift_to_df(self, sql):
         """Redshift results to Pandas DataFrame
