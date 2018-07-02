@@ -15,7 +15,7 @@ from red_panda.constants import (
     TYPES_MAP
 )
 from red_panda.redshift_admin_templates import (
-    SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS
+    SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS, SQL_RUNNING_INFO
 )
 from red_panda.errors import ReservedWordError
 
@@ -127,6 +127,9 @@ class RedshiftUtils:
 
     def get_load_error(self, as_df=True):
         return self.run_template(SQL_LOAD_ERRORS, as_df)
+
+    def get_running_info(self, as_df=True):
+        return self.run_template(SQL_RUNNING_INFO, as_df)
 
     def redshift_to_df(self, sql):
         """Redshift results to Pandas DataFrame
