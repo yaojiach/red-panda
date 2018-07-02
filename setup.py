@@ -34,6 +34,7 @@ setup(
     ],
     extras_require={
         'dev': [
+            'python-dotenv',
             'pytest',
             'tox',
         ],

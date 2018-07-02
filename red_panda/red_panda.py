@@ -168,6 +168,15 @@ class S3Utils:
         )
         return s3
     
+    def _check_s3_bucket_existence(self, bucket):
+        s3 = self.get_s3_client()
+        try:
+            s3.head_bucket(Bucket=bucket)
+        except botocore.errorfactory.ClientError:
+            return False
+        else:
+            return True
+
     def _check_s3_key_existence(self, bucket, key):
         s3 = self._connect_s3()
         try:
