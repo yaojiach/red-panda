@@ -52,6 +52,79 @@ def filter_kwargs(full, ref):
     return {k: v for k, v in full.items() if k in ref}
 
 
+def create_column_definition_single(d):
+    """
+
+    # Arguments
+        d: dict, a dict of values to compose a single column definition, defaults:
+        {
+            'data_type': 'varchar(256)', # str
+            'default': None, # Any
+            'identity': None, # tuple
+            'encode': None, # str
+            'distkey': False,
+            'sortkey': False,
+            'nullable': True,
+            'unique': False,
+            'primary_key': False,
+            'foreign_key': False,
+            'references': None, # str
+            'like': None, # str
+        }
+    
+    # TODO
+        - Check validity of arguments before running, i.e. only one distkey is set. etc
+    """
+    data_type = d.get('data_type')
+    data_type_option = data_type if data_type is not None else 'varchar(256)'
+    default = d.get('default')
+    quote = "'" if not isinstance(default, (int, float, complex)) else ''
+    default_option = f"default {quote}{default}{quote}" if default is not None else ''
+    identity = d.get('identity')
+    if identity is not None:
+        seed, step = identity
+        identity_option = f'identity({seed}, {step})'
+    else:
+        identity_option = ''
+    encode = d.get('encode')
+    encode_option = f'encode {encode}' if encode is not None else ''
+    distkey = d.get('distkey')
+    distkey_option = 'distkey' if distkey else ''
+    sortkey = d.get('sortkey')
+    sortkey_option = 'sortkey' if sortkey else ''
+    nullable = d.get('nullable')
+    nullable_option = '' if nullable else 'not null'
+    unique = d.get('unique')
+    unique_option = 'unique' if unique else ''
+    primary_key = d.get('primary_key')
+    primary_key_option = 'primary key' if primary_key else ''
+    foreign_key = d.get('foreign_key')
+    foreign_key_option = 'foreign key' if foreign_key else ''
+    references = d.get('references')
+    references_option = f'references {references}' if references is not None else ''
+    like = d.get('like')
+    like_option = f'like {like}' if like is not None else ''
+    template = ' '.join([
+        data_type_option,
+        default_option,
+        identity_option,
+        encode_option,
+        distkey_option,
+        sortkey_option,
+        nullable_option,
+        unique_option,
+        primary_key_option,
+        foreign_key_option,
+        references_option,
+        like_option
+    ])
+    return ' '.join(template.split())
+
+
+def create_column_definition(d):
+    return ',\n'.join(f'{c} {create_column_definition_single(o)}' for c, o in d.items())
+
+
 class RedshiftUtils:
     """ Base class for Redshift operations
     """
@@ -143,6 +216,65 @@ class RedshiftUtils:
         data, columns = self.run_query(sql, fetch=True)
         data = pd.DataFrame(data, columns=columns)
         return data
+    
+    def create_table(
+        self,
+        table_name,
+        column_definition,
+        temp=False,
+        if_not_exists=False,
+        backup='YES',
+        diststyle='EVEN',
+        distkey=None,
+        sortstyle='COMPOUND',
+        sortkey=None,
+        drop_first=False
+    ):
+        """Utility for creating table in Redshift
+
+        # Arguments
+            column_definition: dict, default:
+            {
+                'col1': {
+                    'data_type': 'varchar(256)', # str
+                    'default': None, # Any
+                    'identity': None, # tuple(int, int)
+                    'encode': None, # str
+                    'distkey': False,
+                    'sortkey': False,
+                    'nullable': True,
+                    'unique': False,
+                    'primary_key': False,
+                    'foreign_key': False,
+                    'references': None, # str
+                    'like': None, # str
+                },
+                'col2': {
+                    ...
+                },
+                ...
+            }
+            sortkey: list[str]
+
+        # TODO
+            - More rigorous testing
+        """
+        if drop_first:
+            self.run_query(f'drop table if exists {table_name}')
+        temp_option = 'temp' if temp else ''
+        exist_option = 'if not exists' if if_not_exists else ''
+        distkey_option = f'distkey({distkey})' if distkey is not None else ''
+        sortkey_option = f'{sortstyle} sortkey({" ".join(sortkey)})' if sortkey is not None else ''
+        create_template = f"""\
+        create table {temp_option} {table_name} {exist_option} (
+        {create_column_definition(column_definition)}
+        )
+        backup {backup}
+        diststyle {diststyle}
+        {distkey_option}
+        {sortkey_option}
+        """
+        self.run_query(create_template)
 
 
 class S3Utils:
