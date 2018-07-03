@@ -14,6 +14,8 @@ Features
 
 - DataFrame/files to and from S3 and Redshift.
 - Run queries on Redshift in Python.
+- Use built-in Redshift admin queries, such as checking running queries.
+- Use Redshift utility functions to easily accomplish common tasks such as create table.
 - Manage files on S3.
 
 
@@ -75,6 +77,9 @@ It is also possible to:
 - Run queries on Redshift
 - Download S3 file to local
 - Read S3 file in memory as DataFrame
+- Run built-in Redshift admin queries, such as getting running query information
+- Use utility functions such as ``create_table`` to quickly create tables in Redshift
+- Separate concerns by using ``RedshiftUtils`` or ``S3Utils``
 
 
 .. code-block:: python
@@ -115,6 +120,16 @@ It is also possible to:
 
     # Read S3 file in memory as DataFrame
     df = rp.s3_to_df(s3_bucket, s3_key, delimiter=',') # csv file in this example
+
+    # Since we are only going to use Redshift functionalities, we can just use ``RedshiftUtils``
+    from red_panda.red_panda import RedshiftUtils
+    ru = RedshiftUtils(redshift_conf)
+
+    # Run built-in Redshift admin queries, such as getting running query information
+    load_errors = ru.get_load_error(as_df=True)
+
+    # Use utility functions such as ``create_table`` to quickly create tables in Redshift
+    ru.create_table('test_table', column_definition, sortkey=['col2'], drop_first=True)
 
 
 For API documentation, visit https://red-panda.readthedocs.io/en/latest/.
