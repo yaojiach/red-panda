@@ -97,12 +97,13 @@ It is also possible to:
     rp.file_to_s3('test_data.csv', s3_bucket, s3_key)
 
     # Populate a Redshift table from S3 files
-    redshift_column_datatype = {
-        'col1': 'int',
-        'col2': 'int',
+    # Use a dictionary for column definition, here we minimally define only data_type
+    redshift_column_definition = {
+        'col1': {data_type: 'int'},
+        'col2': {data_type: 'int'},
     }
     rp.s3_to_redshift(
-        s3_bucket, s3_key, 'test_table', column_definition=redshift_column_datatype
+        s3_bucket, s3_key, 'test_table', column_definition=redshift_column_definition
     )
 
     # Unload Redshift query result to S3
@@ -129,7 +130,7 @@ It is also possible to:
     load_errors = ru.get_load_error(as_df=True)
 
     # Use utility functions such as create_table to quickly create tables in Redshift
-    ru.create_table('test_table', column_definition, sortkey=['col2'], drop_first=True)
+    ru.create_table('test_table', redshift_column_definition, sortkey=['col2'], drop_first=True)
 
 
 For API documentation, visit https://red-panda.readthedocs.io/en/latest/.
