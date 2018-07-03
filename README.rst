@@ -121,14 +121,14 @@ It is also possible to:
     # Read S3 file in memory as DataFrame
     df = rp.s3_to_df(s3_bucket, s3_key, delimiter=',') # csv file in this example
 
-    # Since we are only going to use Redshift functionalities, we can just use ``RedshiftUtils``
+    # Since we are only going to use Redshift functionalities, we can just use RedshiftUtils
     from red_panda.red_panda import RedshiftUtils
     ru = RedshiftUtils(redshift_conf)
 
     # Run built-in Redshift admin queries, such as getting running query information
     load_errors = ru.get_load_error(as_df=True)
 
-    # Use utility functions such as ``create_table`` to quickly create tables in Redshift
+    # Use utility functions such as create_table to quickly create tables in Redshift
     ru.create_table('test_table', column_definition, sortkey=['col2'], drop_first=True)
 
 
