@@ -29,7 +29,8 @@ def map_types(columns_types):
     # Returns
         A dict of {original column name: mapped redshift data type}
     """
-    return {c: TYPES_MAP.get(t.name) if TYPES_MAP.get(t.name) is not None else 'varchar(256)' \
+    return {c: {'data_type': TYPES_MAP.get(t.name)} \
+            if TYPES_MAP.get(t.name) is not None else 'varchar(256)' \
             for c, t in columns_types.items()}
 
 
@@ -89,17 +90,15 @@ def create_column_definition_single(d):
     encode = d.get('encode')
     encode_option = f'encode {encode}' if encode is not None else ''
     distkey = d.get('distkey')
-    distkey_option = 'distkey' if distkey else ''
+    distkey_option = 'distkey' if distkey is not None and distkey else ''
     sortkey = d.get('sortkey')
-    sortkey_option = 'sortkey' if sortkey else ''
+    sortkey_option = 'sortkey' if sortkey is not None and sortkey else ''
     nullable = d.get('nullable')
-    nullable_option = '' if nullable else 'not null'
+    nullable_option = 'not null' if nullable is not None and not nullable else ''
     unique = d.get('unique')
-    unique_option = 'unique' if unique else ''
+    unique_option = 'unique' if unique is not None and unique else ''
     primary_key = d.get('primary_key')
-    primary_key_option = 'primary key' if primary_key else ''
-    foreign_key = d.get('foreign_key')
-    foreign_key_option = 'foreign key' if foreign_key else ''
+    primary_key_option = 'primary key' if primary_key is not None and primary_key else ''
     references = d.get('references')
     references_option = f'references {references}' if references is not None else ''
     like = d.get('like')
@@ -114,7 +113,6 @@ def create_column_definition_single(d):
         nullable_option,
         unique_option,
         primary_key_option,
-        foreign_key_option,
         references_option,
         like_option
     ])
@@ -224,6 +222,10 @@ class RedshiftUtils:
         temp=False,
         if_not_exists=False,
         backup='YES',
+        unique=None,
+        primary_key=None,
+        foreign_key=None,
+        references=None,
         diststyle='EVEN',
         distkey=None,
         sortstyle='COMPOUND',
@@ -254,15 +256,32 @@ class RedshiftUtils:
                 },
                 ...
             }
+
+            unique: list[str]
+
+            primary_key: str
+
+            foreign_key: list[str], must match references.
+
+            references: list[str], must match foreign_key.
+
             sortkey: list[str]
 
         # TODO
+            - Complete doctring
+            - Check consistency between column_constraints and table_contraints
             - More rigorous testing
         """
         if drop_first:
             self.run_query(f'drop table if exists {table_name}')
         temp_option = 'temp' if temp else ''
         exist_option = 'if not exists' if if_not_exists else ''
+        unique_option = f'unique ({", ".join(unique)})' if unique is not None else ''
+        primary_key_option = f'primary key ({primary_key})' if primary_key is not None else ''
+        foreign_key_option = f'foreign key ({", ".join(foreign_key)})' \
+                             if foreign_key is not None else ''
+        references_option = f'references ({", ".join(references)})' \
+                            if references is not None else ''
         distkey_option = f'distkey({distkey})' if distkey is not None else ''
         sortkey_option = f'{sortstyle} sortkey({" ".join(sortkey)})' if sortkey is not None else ''
         create_template = f"""\
@@ -271,6 +290,10 @@ class RedshiftUtils:
         )
         backup {backup}
         diststyle {diststyle}
+        {unique_option}
+        {primary_key_option}
+        {foreign_key_option}
+        {references_option}
         {distkey_option}
         {sortkey_option}
         """
@@ -518,12 +541,14 @@ class RedPanda(RedshiftUtils, S3Utils):
             if column_definition is None:
                 raise ValueError('column_definition cannot be None if append is False')
             else:
-                drop_template = f'drop table if exists {table_name}'
-                self.run_query(drop_template)
-                column_definition_template = ','.join(f'{c} {t}' \
-                                                      for c, t in column_definition.items())
-                create_template = f'create table {table_name} ({column_definition_template})'
-                self.run_query(create_template)
+                drop_first = False if append else True
+                self.create_table(table_name, column_definition, drop_first=drop_first)
+                # drop_template = f'drop table if exists {table_name}'
+                # self.run_query(drop_template)
+                # column_definition_template = ','.join(f'{c} {t}' \
+                #                                       for c, t in column_definition.items())
+                # create_template = f'create table {table_name} ({column_definition_template})'
+                # self.run_query(create_template)
 
         s3_source = f's3://{bucket}/{key}'
         quote_option = f"csv quote as '{quote_character}'" if delimiter == ',' else ''
