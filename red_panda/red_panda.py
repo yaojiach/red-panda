@@ -125,7 +125,7 @@ def create_column_definition(d):
 
 
 def prettify_sql(sql):
-    return re.sub('\n\s*\n*', '\n', sql.lstrip())
+    return re.sub(r'\n\s*\n*', '\n', sql.lstrip())
 
 
 class RedshiftUtils:
