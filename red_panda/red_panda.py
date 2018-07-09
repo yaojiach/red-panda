@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 import warnings
 from collections import OrderedDict
 from io import StringIO, BytesIO
@@ -123,6 +124,10 @@ def create_column_definition(d):
     return ',\n'.join(f'{c} {create_column_definition_single(o)}' for c, o in d.items())
 
 
+def prettify_sql(sql):
+    return re.sub('\n\s*\n*', '\n', sql.lstrip())
+
+
 class RedshiftUtils:
     """ Base class for Redshift operations
     """
@@ -153,7 +158,7 @@ class RedshiftUtils:
             list of column names.
         """
         if self._debug:
-            print(dedent(sql))
+            print(prettify_sql(sql))
             return (None, None)
 
         conn = self._connect_redshift()
@@ -496,9 +501,21 @@ class RedPanda(RedshiftUtils, S3Utils):
         quote_character='"',
         dateformat='auto',
         timeformat='auto',
-        acceptinvchars=True,
+        acceptinvchars='?',
+        acceptanydate=False,
+        blanksasnull=False,
+        emptyasnull=False,
         escape=False,
         null=None,
+        encoding=None,
+        explicit_ids=False,
+        fillrecord=False,
+        ignoreblanklines=False,
+        removequotes=False,
+        roundec=False,
+        trimblanks=False,
+        truncatecolumns=False,
+        column_list=None,
         region=None,
         iam_role=None
     ):
@@ -554,7 +571,19 @@ class RedPanda(RedshiftUtils, S3Utils):
         quote_option = f"csv quote as '{quote_character}'" if delimiter == ',' else ''
         region_option = f"region '{region}'" if region is not None else ''
         escape_option = 'escape' if escape else ''
-        acceptinvchars_option = 'acceptinvchars' if acceptinvchars else ''
+        acceptinvchars_option = f"acceptinvchars as '{acceptinvchars}'" \
+                                if acceptinvchars is not None else ''
+        acceptanydate_option = 'acceptanydate' if acceptanydate else ''
+        blanksasnull_option = 'blanksasnull' if blanksasnull else ''
+        emptyasnull_option = 'emptyasnull' if emptyasnull else ''
+        explicit_ids_option = 'explicit_ids' if explicit_ids else ''
+        fillrecord_option = 'fillrecord' if fillrecord else ''
+        ignoreblanklines_option = 'ignoreblanklines' if ignoreblanklines else ''
+        removequotes_option = 'removequotes' if removequotes else ''
+        roundec_option = 'roundec' if roundec else ''
+        trimblanks_option = 'trimblanks' if trimblanks else ''
+        truncatecolumns_option = 'truncatecolumns' if truncatecolumns else ''
+        encoding_option = f'encoding as {encoding}' if encoding is not None else ''
         null_option = f"null as '{null}'" if null is not None else ''
         aws_access_key_id = self.s3_config.get("aws_access_key_id")
         aws_secret_access_key = self.s3_config.get("aws_secret_access_key")
@@ -572,14 +601,28 @@ class RedPanda(RedshiftUtils, S3Utils):
             iam_role_option = ''
             access_key_id_option = f"access_key_id '{aws_access_key_id}'"
             secret_access_key_option = f"secret_access_key '{aws_secret_access_key}'"
+        column_list_option = ''
+        if column_list is not None:
+            column_list_option = f"({','.join(column_list)})"
         copy_template = f"""\
-        copy {table_name}
+        copy {table_name} {column_list_option}
         from '{s3_source}' 
         delimiter '{delimiter}'
         {quote_option}
         {escape_option}
         {acceptinvchars_option}
+        {acceptanydate_option}
+        {blanksasnull_option}
+        {emptyasnull_option}
         {null_option}
+        {encoding_option}
+        {explicit_ids_option}
+        {fillrecord_option}
+        {removequotes_option}
+        {roundec_option}
+        {trimblanks_option}
+        {truncatecolumns_option}
+        {ignoreblanklines_option}
         ignoreheader {ignoreheader}
         dateformat '{dateformat}'
         timeformat '{timeformat}'

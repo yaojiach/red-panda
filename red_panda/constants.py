@@ -236,8 +236,20 @@ COPY_KWARGS = [
     'region',
     'null',
     'escape', # bool
-    'acceptinvchars', # bool
+    'acceptinvchars', # str
     'iam_role',
+    'acceptanydate', # bool
+    'column_list', # list[str]
+    'blanksasnull', # bool
+    'emptyasnull', # bool
+    'encoding', # str
+    'explicit_ids', # bool
+    'fillrecord', # bool
+    'ignoreblanklines', # bool
+    'removequotes', # bool
+    'roundec', # bool
+    'trimblanks', # bool
+    'truncatecolumns', # bool
 ]
 
 UNLOAD_KWARGS = [
