@@ -305,17 +305,52 @@ class RedshiftUtils:
         self.run_query(create_template)
 
 
-class S3Utils:
-    """ Base class for S3 operations
+class AWSUtils:
+    """ Base class for AWS operations
     """
-    def __init__(self, s3_config):
-        if s3_config is None:
-            s3_config = {
+    def __init__(self, aws_config):
+        if aws_config is None:
+            aws_config = {
                 'aws_access_key_id': None,
                 'aws_secret_access_key': None,
                 'aws_session_token': None,
+                'region_name': None
             }
-        self.s3_config = s3_config
+        self.aws_config = aws_config 
+
+
+class EMRUtils(AWSUtils):
+    """ Base class for EMR operations
+    """
+    def __init__(self, aws_config):
+        super().__init__(aws_config=aws_config)
+
+    def get_emr_client(self):
+        """Get EMR client
+
+        If key/secret are not provided, boto3's default behavior is falling back to awscli configs
+        and environment variables.
+        """
+        emr = boto3.client(
+            'emr',
+            aws_access_key_id=self.aws_config.get('aws_access_key_id'),
+            aws_secret_access_key=self.aws_config.get('aws_secret_access_key'),
+            aws_session_token=self.aws_config.get('aws_session_token'),
+            region_name=self.aws_config.get('region_name'),
+        )
+        return emr
+
+    def awscli_to_(self, command):
+        """ Translate awscli command to boto3 call
+        """
+        pass
+
+
+class S3Utils(AWSUtils):
+    """ Base class for S3 operations
+    """
+    def __init__(self, aws_config):
+        super().__init__(aws_config=aws_config)
 
     def _connect_s3(self):
         """Get S3 session
@@ -325,9 +360,9 @@ class S3Utils:
         """
         s3 = boto3.resource(
             's3',
-            aws_access_key_id=self.s3_config.get('aws_access_key_id'),
-            aws_secret_access_key=self.s3_config.get('aws_secret_access_key'),
-            aws_session_token=self.s3_config.get('aws_session_token')
+            aws_access_key_id=self.aws_config.get('aws_access_key_id'),
+            aws_secret_access_key=self.aws_config.get('aws_secret_access_key'),
+            aws_session_token=self.aws_config.get('aws_session_token')
         )
         return s3
     
@@ -519,9 +554,9 @@ class RedPanda(RedshiftUtils, S3Utils):
         - https://github.com/agawronski/pandas_redshift for inspiration
     """
     
-    def __init__(self, redshift_config, s3_config=None, debug=False):
+    def __init__(self, redshift_config, aws_config=None, debug=False):
         RedshiftUtils.__init__(self, redshift_config, debug)
-        S3Utils.__init__(self, s3_config)
+        S3Utils.__init__(self, aws_config)
 
     def s3_to_redshift(
         self, 
@@ -619,13 +654,13 @@ class RedPanda(RedshiftUtils, S3Utils):
         truncatecolumns_option = 'truncatecolumns' if truncatecolumns else ''
         encoding_option = f'encoding as {encoding}' if encoding is not None else ''
         null_option = f"null as '{null}'" if null is not None else ''
-        aws_access_key_id = self.s3_config.get("aws_access_key_id")
-        aws_secret_access_key = self.s3_config.get("aws_secret_access_key")
+        aws_access_key_id = self.aws_config.get("aws_access_key_id")
+        aws_secret_access_key = self.aws_config.get("aws_secret_access_key")
         if aws_access_key_id is None and aws_secret_access_key is None and iam_role is None:
             raise ValueError(
                 'Must provide at least one of [iam_role, aws_access_key_id/aws_secret_access_key]'
             )
-        aws_token = self.s3_config.get("aws_session_token")
+        aws_token = self.aws_config.get("aws_session_token")
         aws_token_option = f"session_token '{aws_token}'" if aws_token is not None else ''
         if iam_role is not None:
             iam_role_option = f"iam_role '{iam_role}'"
@@ -828,13 +863,13 @@ class RedPanda(RedshiftUtils, S3Utils):
         allowoverwrite_option = 'allowoverwrite' if allowoverwrite else ''
         parallel_option = f"parallel {parallel}"
         maxfilesize_option = f"maxfilesize '{maxfilesize}'" if maxfilesize is not None else ''
-        aws_access_key_id = self.s3_config.get("aws_access_key_id")
-        aws_secret_access_key = self.s3_config.get("aws_secret_access_key")
+        aws_access_key_id = self.aws_config.get("aws_access_key_id")
+        aws_secret_access_key = self.aws_config.get("aws_secret_access_key")
         if aws_access_key_id is None and aws_secret_access_key is None and iam_role is None:
             raise ValueError(
                 'Must provide at least one of [iam_role, aws_access_key_id/aws_secret_access_key]'
             )
-        aws_token = self.s3_config.get("aws_session_token")
+        aws_token = self.aws_config.get("aws_session_token")
         aws_token_option = f"session_token '{aws_token}'" if aws_token is not None else ''
         if iam_role is not None:
             iam_role_option = f"iam_role '{iam_role}'"
