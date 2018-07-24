@@ -315,6 +315,16 @@ S3_GET_KWARGS = [
     'PartNumber',
 ]
 
+S3_CREATE_BUCKET_KWARGS = [
+    'ACL',
+    'CreateBucketConfiguration',
+    'GrantFullControl',
+    'GrantRead',
+    'GrantReadACP',
+    'GrantWrite',
+    'GrantWriteACP',
+]
+
 TYPES_MAP = {
     'O': 'varchar(256)',
     'object': 'varchar(256)',

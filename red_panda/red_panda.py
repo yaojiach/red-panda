@@ -13,12 +13,12 @@ import botocore
 
 from red_panda.constants import (
     RESERVED_WORDS, TOCSV_KWARGS, READ_TABLE_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, S3_GET_KWARGS, 
-    TYPES_MAP
+    TYPES_MAP, S3_CREATE_BUCKET_KWARGS
 )
 from red_panda.redshift_admin_templates import (
     SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS, SQL_RUNNING_INFO
 )
-from red_panda.errors import ReservedWordError
+from red_panda.errors import ReservedWordError, S3BucketExists
 
 
 def map_types(columns_types):
@@ -366,6 +366,30 @@ class S3Utils:
         """Return a boto3 S3 client"""
         return self._connect_s3().meta.client
 
+    def list_buckets(self):
+        s3 = self.get_s3_client()
+        response = s3.list_buckets()
+        buckets = [bucket['Name'] for bucket in response['Buckets']]
+        return buckets
+
+    def create_bucket(self, bucket, error='warn', response=False, **kwargs):
+        """Check and create bucket
+
+        # Argument
+            bucket: str, s3 bucket name
+            error: str, 'warn' or 'raise' or 'silent', how to handle if bucket already exists
+        """
+        s3 = self.get_s3_client()
+        if bucket in self.list_buckets():
+            if error == 'raise':
+                raise S3BucketExists(f'{bucket} already exists')
+            elif error == 'warn':
+                warnings.warn(f'{bucket} already exists')
+        extra_kwargs = filter_kwargs(kwargs, S3_CREATE_BUCKET_KWARGS)
+        res = s3.create_bucket(Bucket=bucket, **extra_kwargs)
+        if response:    
+            return res
+
     def file_to_s3(self, file_name, bucket, key, **kwargs):
         """Put a file to S3
 
@@ -417,6 +441,16 @@ class S3Utils:
         else:
             if not silent:
                 print(f'{bucket}: {key} does not exist.')
+
+    def delete_bucket(self, bucket):
+        """Delete bucket and all objects
+
+        # TODO
+            Handle when there is bucket versioning
+        """
+        s3_bucket = self.get_s3_resource().Bucket(bucket)
+        s3_bucket.objects.all().delete()
+        s3_bucket.delete()
     
     def s3_to_obj(self, bucket, key, **kwargs):
         """Read S3 object into memory as BytesIO
