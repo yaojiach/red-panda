@@ -31,6 +31,7 @@ setup(
         'pandas',
         'psycopg2-binary',
         'boto3',
+        'awscli',
     ],
     extras_require={
         'dev': [

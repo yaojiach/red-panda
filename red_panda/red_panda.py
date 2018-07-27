@@ -10,6 +10,7 @@ import pandas as pd
 import psycopg2
 import boto3
 import botocore
+from awscli.clidriver import create_clidriver
 
 from red_panda.constants import (
     RESERVED_WORDS, TOCSV_KWARGS, READ_TABLE_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, S3_GET_KWARGS, 
@@ -18,7 +19,7 @@ from red_panda.constants import (
 from red_panda.redshift_admin_templates import (
     SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS, SQL_RUNNING_INFO
 )
-from red_panda.errors import ReservedWordError, S3BucketExists
+from red_panda.errors import ReservedWordError, S3BucketExists, S3BucketNotExist, S3KeyNotExist
 
 
 def map_types(columns_types):
@@ -126,6 +127,42 @@ def create_column_definition(d):
 
 def prettify_sql(sql):
     return re.sub(r'\n\s*\n*', '\n', sql.lstrip())
+
+
+def set_aws_env_from_config(env, config):
+    if config.get('aws_access_key_id') is not None:
+        env['AWS_ACCESS_KEY_ID'] = config.get('aws_access_key_id')
+    if config.get('aws_secret_access_key') is not None:
+        env['AWS_SECRET_ACCESS_KEY'] = config.get('aws_secret_access_key')
+    if config.get('aws_session_token') is not None:
+        env['AWS_SESSION_TOKEN'] = config.get('aws_session_token')
+    if config.get('metadata_service_timeout') is not None:
+        env['AWS_METADATA_SERVICE_TIMEOUT'] = config.get('metadata_service_timeout')
+    if config.get('metadata_service_num_attempts') is not None:
+        env['AWS_METADATA_SERVICE_NUM_ATTEMPTS'] = config.get('metadata_service_num_attempts')
+    return env
+
+
+def run_awscli(*cmd, config=None):
+    """Work around to run awscli commands for features not included in boto3
+
+    # Example
+        `run_awscli('s3', 'sync', 's3://bucket/source', 's3://bucket/destination', '--delete')`
+    """
+    old_env = os.environ.copy()
+    try:
+        env = os.environ.copy()
+        env['LC_CTYPE'] = 'en_US.UTF'
+        if config is not None:
+            env = set_aws_env_from_config(env, config)
+        os.environ.update(env)
+        exit_code = create_clidriver().main([*cmd])
+        if exit_code > 0:
+            raise RuntimeError(f'awscli exited with code {exit_code}')
+    finally:
+        print(dict(os.environ))
+        os.environ.clear()
+        os.environ.update(old_env)
 
 
 class RedshiftUtils:
@@ -340,11 +377,6 @@ class EMRUtils(AWSUtils):
         )
         return emr
 
-    def awscli_to_(self, command):
-        """ Translate awscli command to boto3 call
-        """
-        pass
-
 
 class S3Utils(AWSUtils):
     """ Base class for S3 operations
@@ -376,9 +408,9 @@ class S3Utils(AWSUtils):
             return True
 
     def _check_s3_key_existence(self, bucket, key):
-        s3 = self._connect_s3()
+        s3 = self.get_s3_client()
         try:
-            s3.meta.client.head_object(Bucket=bucket, Key=key)
+            s3.head_object(Bucket=bucket, Key=key)
         except botocore.errorfactory.ClientError:
             return False
         else:
@@ -389,7 +421,7 @@ class S3Utils(AWSUtils):
             warnings.warn(f'{key} exists in {bucket}. May cause data consistency issues.')
 
     def _get_s3_pattern_existence(self, bucket, pattern):
-        s3 = self._connect_s3()
+        s3 = self.get_s3_resource()
         all_keys = [o.key for o in s3.Bucket(bucket).objects.all() if o.key.startswith(pattern)]
         return all_keys
 
@@ -415,7 +447,7 @@ class S3Utils(AWSUtils):
             error: str, 'warn' or 'raise' or 'silent', how to handle if bucket already exists
         """
         s3 = self.get_s3_client()
-        if bucket in self.list_buckets():
+        if self._check_s3_bucket_existence(bucket):
             if error == 'raise':
                 raise S3BucketExists(f'{bucket} already exists')
             elif error == 'warn':
@@ -533,6 +565,11 @@ class S3Utils(AWSUtils):
         read_table_kwargs = filter_kwargs(kwargs, READ_TABLE_KWARGS)
         buffer = self.s3_to_obj(bucket, key, **s3_get_kwargs)
         return pd.read_table(buffer, **read_table_kwargs)
+
+    def sync(self, source, destination, *args):
+        """Sync two buckets or directories
+        """
+        run_awscli('s3', 'sync', source, destination, *args, config=self.aws_config)
 
 
 class RedPanda(RedshiftUtils, S3Utils):

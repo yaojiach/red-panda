@@ -8,6 +8,7 @@ pandas = "*"
 "psycopg2-binary" = "*"
 "boto3" = "*"
 botocore = "*"
+awscli = "*"
 
 [dev-packages]
 pylint = "*"
@@ -20,4 +21,3 @@ recommonmark = "*"
 restview = "*"
 sphinx-rtd-theme = "*"
 python-dotenv = "*"
-
