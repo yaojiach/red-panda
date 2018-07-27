@@ -14,7 +14,7 @@ from awscli.clidriver import create_clidriver
 
 from red_panda.constants import (
     RESERVED_WORDS, TOCSV_KWARGS, READ_TABLE_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, S3_GET_KWARGS, 
-    TYPES_MAP, S3_CREATE_BUCKET_KWARGS
+    TYPES_MAP, S3_CREATE_BUCKET_KWARGS, TRANSLATOR_IMPLEMENTED
 )
 from red_panda.redshift_admin_templates import (
     SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS, SQL_RUNNING_INFO
@@ -162,6 +162,18 @@ def run_awscli(*cmd, config=None):
     finally:
         os.environ.clear()
         os.environ.update(old_env)
+
+
+class CliBotoTranslator:
+    """ Class to translate awscli command to boto3 parameters (kwargs)
+
+    # Argument
+        cmd: str, Example: `aws s3 sync s3://bucket1 s3://bucket2`
+    """
+    def __init__(self, cmd):
+        cmd = cmd.split()
+        self.service = cmd.split()[1]
+        self.params = cmd.split()[2:]
 
 
 class RedshiftUtils:
@@ -375,6 +387,9 @@ class EMRUtils(AWSUtils):
             region_name=self.aws_config.get('region_name'),
         )
         return emr
+
+    def cli_create_cluster(self, *args):
+        run_awscli('emr', 'create-cluster', *args, config=self.aws_config)
 
 
 class S3Utils(AWSUtils):

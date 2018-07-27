@@ -331,3 +331,7 @@ TYPES_MAP = {
     'int64': 'bigint',
     'float64': 'double precision',
 }
+
+TRANSLATOR_IMPLEMENTED = [
+    'emr'
+]
