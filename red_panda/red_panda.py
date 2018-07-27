@@ -160,7 +160,6 @@ def run_awscli(*cmd, config=None):
         if exit_code > 0:
             raise RuntimeError(f'awscli exited with code {exit_code}')
     finally:
-        print(dict(os.environ))
         os.environ.clear()
         os.environ.update(old_env)
 
