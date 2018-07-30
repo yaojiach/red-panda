@@ -131,3 +131,13 @@ left outer join (
 on alrt.query = q.query
 order by q.service_class,q.exec_time desc, q.wlm_start_time
 """
+
+SQL_LOCK_INFO = """\
+select table_id, 
+last_update, 
+last_commit, 
+lock_owner_pid, 
+lock_status 
+from stv_locks 
+order by last_update asc
+"""

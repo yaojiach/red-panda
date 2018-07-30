@@ -17,7 +17,7 @@ from red_panda.constants import (
     TYPES_MAP, S3_CREATE_BUCKET_KWARGS, TRANSLATOR_IMPLEMENTED
 )
 from red_panda.redshift_admin_templates import (
-    SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS, SQL_RUNNING_INFO
+    SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS, SQL_RUNNING_INFO, SQL_LOCK_INFO
 )
 from red_panda.errors import ReservedWordError, S3BucketExists, S3BucketNotExist, S3KeyNotExist
 
@@ -230,6 +230,11 @@ class RedshiftUtils:
             conn.close()
         return (data, columns)
 
+    def cancel_query(self, pid, transaction=False):
+        self.run_query(f"cancel '{pid}'")
+        if transaction:
+            self.run_query('abort')
+
     def get_num_slices(self):
         """Get number of slices of a Redshift cluster"""
         data, _ = self.run_query(SQL_NUM_SLICES, fetch=True)
@@ -254,6 +259,9 @@ class RedshiftUtils:
 
     def get_running_info(self, as_df=True):
         return self.run_template(SQL_RUNNING_INFO, as_df)
+
+    def get_lock_info(self, as_df=True):
+        return self.run_template(SQL_LOCK_INFO, as_df)
 
     def redshift_to_df(self, sql):
         """Redshift results to Pandas DataFrame
