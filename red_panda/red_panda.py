@@ -235,6 +235,9 @@ class RedshiftUtils:
         if transaction:
             self.run_query('abort')
 
+    def kill_session(self, pid):
+        self.run_query(f'select pg_terminate_backend({pid})')
+
     def get_num_slices(self):
         """Get number of slices of a Redshift cluster"""
         data, _ = self.run_query(SQL_NUM_SLICES, fetch=True)
