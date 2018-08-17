@@ -402,6 +402,11 @@ class EMRUtils(AWSUtils):
     def cli_create_cluster(self, *args):
         run_awscli('emr', 'create-cluster', *args, config=self.aws_config)
 
+    def get_master_publicdns(self, cluster_id=None):
+        emr_client = self.get_emr_client()
+        desc = emr_client.describe_cluster(ClusterId=cluster_id)
+        return desc['Cluster']['MasterPublicDnsName']
+
 
 class S3Utils(AWSUtils):
     """ Base class for S3 operations
