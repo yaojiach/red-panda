@@ -400,6 +400,96 @@ class EMRUtils(AWSUtils):
         return emr
 
     def cli_create_cluster(self, *args):
+        """TODO: Use `run_job_flow` instead
+
+        # Example
+        ```
+        emr.cli_create_cluster(
+            '--auto-scaling-role', 'EMR_AutoScaling_DefaultRole',
+            '--applications', 
+            'Name=Hadoop', 
+            'Name=Hive',
+            'Name=Pig', 
+            'Name=Hue', 
+            'Name=Spark', 
+            'Name=Tez', 
+            'Name=Zeppelin',
+            '--ebs-root-volume-size', '32',
+            '--ec2-attributes', '''
+            {
+                "KeyName":"TODO-CHANGE-TO-ACTUAL",
+                "InstanceProfile":"EMR_EC2_DefaultRole",
+                "SubnetId":"TODO-CHANGE-TO-ACTUAL",
+                "EmrManagedSlaveSecurityGroup":"TODO-CHANGE-TO-ACTUAL",
+                "EmrManagedMasterSecurityGroup":"TODO-CHANGE-TO-ACTUAL",
+                "AdditionalMasterSecurityGroups":["TODO-CHANGE-TO-ACTUAL","TODO-CHANGE-TO-ACTUAL"]}
+            ''',
+            '--service-role', 'EMR_DefaultRole',
+            '--enable-debugging',
+            '--release-label', 'emr-5.16.0',
+            '--log-uri', 's3n://TODO-CHANGE-TO-ACTUAL/',
+            '--name', "'TODO-CHANGE-TO-ACTUAL'",
+            '--instance-groups', '''
+            [
+                {
+                    "InstanceCount":4,
+                    "EbsConfiguration":{
+                        "EbsBlockDeviceConfigs":[
+                            {
+                                "VolumeSpecification":{
+                                    "SizeInGB":32,"VolumeType":"gp2"
+                                },
+                                "VolumesPerInstance":1
+                            }
+                            ],
+                        "EbsOptimized":true
+                    },
+                    "InstanceGroupType":"CORE",
+                    "InstanceType":"m4.xlarge",
+                    "Name":"Core - 2"
+                },
+                {
+                    "InstanceCount":1,
+                    "EbsConfiguration":{
+                        "EbsBlockDeviceConfigs":[
+                            {
+                                "VolumeSpecification":{
+                                    "SizeInGB":32,
+                                    "VolumeType":"gp2"
+                                },
+                                "VolumesPerInstance":1
+                            }
+                            ]
+                    },
+                    "InstanceGroupType":"MASTER",
+                    "InstanceType":"m4.2xlarge",
+                    "Name":"Master - 1"}]
+            ''',
+            '--configurations', '''
+            [
+                {
+                    "Classification":"hive-site",
+                    "Properties":{
+                        "hive.metastore.client.factory.class":\
+                        "com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory"
+                    },
+                    "Configurations":[]
+                },
+                {
+                    "Classification":"spark-hive-site",
+                    "Properties":{
+                        "hive.metastore.client.factory.class":\
+                        "com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory"
+                    },
+                    "Configurations":[]
+                }
+            ]
+            ''',
+            '--scale-down-behavior', 'TERMINATE_AT_TASK_COMPLETION',
+            '--region', 'us-east-1'
+        )
+        ```
+        """
         run_awscli('emr', 'create-cluster', *args, config=self.aws_config)
 
     def get_master_publicdns(self, cluster_id=None):
