@@ -164,6 +164,10 @@ def run_awscli(*cmd, config=None):
         os.environ.update(old_env)
 
 
+def validate_emr_create_cluster_config(config):
+    raise NotImplementedError
+
+
 class CliBotoTranslator:
     """ Class to translate awscli command to boto3 parameters (kwargs)
 
@@ -491,6 +495,16 @@ class EMRUtils(AWSUtils):
         ```
         """
         run_awscli('emr', 'create-cluster', *args, config=self.aws_config)
+
+    def create_cluster(self, config):
+        """create cluster from config file
+
+        # Returns
+            Cluster ID: string
+        """
+        emr_client = self.get_emr_client()
+        config = validate_emr_create_cluster_config(config)
+        return emr_client.run_job_flow(**config)
 
     def get_master_publicdns(self, cluster_id=None):
         emr_client = self.get_emr_client()

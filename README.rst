@@ -152,6 +152,7 @@ In no particular order:
 
 In progress:
 
+- EMR create cluster from a config file
 - Take advantage of Redshift slices for parallel processing. Split files for COPY.
 
 Done:
