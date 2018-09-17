@@ -573,6 +573,11 @@ class S3Utils(AWSUtils):
         buckets = [bucket['Name'] for bucket in response['Buckets']]
         return buckets
 
+    def list_object_keys(self, bucket, prefix=''):
+        s3 = self.get_s3_client()
+        response = s3.list_objects(Bucket=bucket, Prefix=prefix)
+        return [o['Key'] for o in response['Contents']]
+
     def create_bucket(self, bucket, error='warn', response=False, **kwargs):
         """Check and create bucket
 
