@@ -2,6 +2,7 @@
 import os
 import re
 import warnings
+from copy import deepcopy
 from collections import OrderedDict
 from io import StringIO, BytesIO
 from textwrap import dedent
@@ -127,6 +128,15 @@ def create_column_definition(d):
 
 def prettify_sql(sql):
     return re.sub(r'\n\s*\n*', '\n', sql.lstrip())
+
+
+def join_s3_path(*args):
+    if len(args) >= 2:
+        l = deepcopy(list(args))
+        i = l[1]
+        if i[0] == '/':
+            l[1] = i[1:]
+    return os.path.join(*l)
 
 
 def set_aws_env_from_config(env, config):
@@ -1020,7 +1030,7 @@ class RedPanda(RedshiftUtils, S3Utils):
         {existing_keys}
         """
         warnings.warn(dedent(warn_message))
-        destination_option = os.path.join(f's3://{bucket}', destination_option)
+        destination_option = join_s3_path(f's3://{bucket}', destination_option)
         if bzip2 and gzip:
             raise ValueError('Only one of [bzip2, gzip] should be True')
         manifest_option = 'manifest' if manifest else ''
