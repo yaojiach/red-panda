@@ -442,7 +442,7 @@ class EMRUtils(AWSUtils):
             '--enable-debugging',
             '--release-label', 'emr-5.16.0',
             '--log-uri', 's3n://TODO-CHANGE-TO-ACTUAL/',
-            '--name', "'TODO-CHANGE-TO-ACTUAL'",
+            '--name', "TODO-CHANGE-TO-ACTUAL",
             '--instance-groups', '''
             [
                 {
