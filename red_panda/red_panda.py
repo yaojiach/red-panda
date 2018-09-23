@@ -382,8 +382,8 @@ class EMRUtils(AWSUtils):
     def __init__(self, aws_config=None):
         super().__init__(aws_config=aws_config)
 
-    @staticmethod
-    def cli_to_config(cli_cmd_str):
+    @classmethod
+    def cli_to_config(cls, cli_cmd_str):
         """Translate awscli's create-cluster command to boto3.emr.run_job_flow parameters
 
         This is helpful when you manually configured EMR in AWS console and then export cli string
@@ -391,8 +391,8 @@ class EMRUtils(AWSUtils):
         """
         raise NotImplementedError
 
-    @staticmethod
-    def validate_emr_create_cluster_config(config):
+    @classmethod
+    def validate_emr_create_cluster_config(cls, config):
         raise NotImplementedError
 
     def get_emr_client(self):
@@ -510,7 +510,7 @@ class EMRUtils(AWSUtils):
             Cluster ID: string
         """
         emr_client = self.get_emr_client()
-        config = validate_emr_create_cluster_config(config)
+        config = EMRUtils.validate_emr_create_cluster_config(config)
         return emr_client.run_job_flow(**config)
 
     def get_master_publicdns(self, cluster_id=None):
