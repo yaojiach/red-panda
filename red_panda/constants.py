@@ -332,6 +332,41 @@ TYPES_MAP = {
     'float64': 'double precision',
 }
 
-TRANSLATOR_IMPLEMENTED = [
-    'emr'
+AWSCLI_CREATE_CLUSTER_ARGS = [
+    'auto-terminate',
+    'no-auto-terminate',
+    'use-default-roles',
+    'termination-protected',
+    'no-termination-protected',
+    'visible-to-all-users',
+    'no-visible-to-all-users',
+    'enable-debugging',
+    'no-enable-debugging',
+]
+
+AWSCLI_CREATE_CLUSTER_KWARGS = [
+    'release-label',
+    'ami-version',
+    'instance-fleets',
+    'instance-groups',
+    'instance-type',
+    'instance-count',
+    'service-role',
+    'configurations',
+    'name',
+    'log-uri',
+    'additional-info',
+    'ec2-attributes',
+    'scale-down-behavior',
+    'tags',
+    'applications',
+    'emrfs',
+    'bootstrap-actions',
+    'steps',
+    'restore-from-hbase-backup',
+    'security-configuration',
+    'custom-ami-id',
+    'ebs-root-volume-size',
+    'repo-upgrade-on-boot',
+    'kerberos-attributes',
 ]
