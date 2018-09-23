@@ -178,18 +178,6 @@ def validate_emr_create_cluster_config(config):
     raise NotImplementedError
 
 
-class CliBotoTranslator:
-    """ Class to translate awscli command to boto3 parameters (kwargs)
-
-    # Argument
-        cmd: str, Example: `aws s3 sync s3://bucket1 s3://bucket2`
-    """
-    def __init__(self, cmd):
-        cmd = cmd.split()
-        self.service = cmd.split()[1]
-        self.params = cmd.split()[2:]
-
-
 class RedshiftUtils:
     """ Base class for Redshift operations
     """
