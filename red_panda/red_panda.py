@@ -174,10 +174,6 @@ def run_awscli(*cmd, config=None):
         os.environ.update(old_env)
 
 
-def validate_emr_create_cluster_config(config):
-    raise NotImplementedError
-
-
 class RedshiftUtils:
     """ Base class for Redshift operations
     """
@@ -383,8 +379,21 @@ class AWSUtils:
 class EMRUtils(AWSUtils):
     """ Base class for EMR operations
     """
-    def __init__(self, aws_config):
+    def __init__(self, aws_config=None):
         super().__init__(aws_config=aws_config)
+
+    @staticmethod
+    def cli_to_config(cli_cmd_str):
+        """Translate awscli's create-cluster command to boto3.emr.run_job_flow parameters
+
+        This is helpful when you manually configured EMR in AWS console and then export cli string
+        for repeated use.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def validate_emr_create_cluster_config(config):
+        raise NotImplementedError
 
     def get_emr_client(self):
         """Get EMR client
