@@ -9,6 +9,7 @@ pandas = "*"
 "boto3" = "*"
 botocore = "*"
 awscli = "*"
+"oss2" = "*"
 
 [dev-packages]
 pylint = "*"

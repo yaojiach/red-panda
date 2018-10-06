@@ -148,10 +148,10 @@ In no particular order:
 - Explore using ``S3 Transfer Manager``'s ``upload_fileobj`` for ``df_to_s3`` to take advantage of automatic multipart upload.
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
 - Build cli to manage data outside of Python.
-- Support GCP?
 
 In progress:
 
+- Support 阿里云, GCP
 - EMR create cluster from a config file
 - Take advantage of Redshift slices for parallel processing. Split files for COPY.
 

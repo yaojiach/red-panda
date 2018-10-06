@@ -17,7 +17,7 @@ from red_panda.constants import (
     RESERVED_WORDS, TOCSV_KWARGS, READ_TABLE_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, S3_GET_KWARGS, 
     TYPES_MAP, S3_CREATE_BUCKET_KWARGS, AWSCLI_CREATE_CLUSTER_KWARGS, AWSCLI_CREATE_CLUSTER_ARGS
 )
-from red_panda.redshift_admin_templates import (
+from red_panda.templates.aws.redshift_admin_templates import (
     SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS, SQL_RUNNING_INFO, SQL_LOCK_INFO
 )
 from red_panda.errors import ReservedWordError, S3BucketExists, S3BucketNotExist, S3KeyNotExist
