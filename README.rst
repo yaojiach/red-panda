@@ -1,7 +1,7 @@
 Red Panda 🐼😊
 ================
 
-Data science on AWS without frustration.
+Data science on the cloud without frustration.
 
 Caveat
 ------
