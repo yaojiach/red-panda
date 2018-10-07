@@ -32,6 +32,7 @@ setup(
         'psycopg2-binary',
         'boto3',
         'awscli',
+        'oss2'
     ],
     extras_require={
         'dev': [
