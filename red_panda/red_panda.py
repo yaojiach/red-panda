@@ -712,6 +712,30 @@ class S3Utils(AWSUtils):
         buffer = self.s3_to_obj(bucket, key, **s3_get_kwargs)
         return pd.read_table(buffer, **read_table_kwargs)
 
+    def s3_folder_to_df(self, bucket, folder, prefix=None, silent=True, **kwargs):
+        s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
+        read_table_kwargs = filter_kwargs(kwargs, READ_TABLE_KWARGS)
+        if folder[-1] != '/':
+            folder = folder + '/'
+        if prefix is None:
+            prefix = '/'
+        pattern = join_s3_path(folder, prefix)
+        allfiles = self.list_object_keys(bucket, pattern)
+        allfiles = [f for f in allfiles if f != folder]
+        dfs = []
+        for f in allfiles:
+            if not silent:
+                print(f'Reading file {f}')
+            dfs.append(
+                self.s3_to_df(
+                    bucket, 
+                    f, 
+                    **s3_get_kwargs,
+                    **read_table_kwargs
+                )
+            )
+        return pd.concat(dfs)
+
     def sync(self, source, destination, *args):
         """Sync two buckets or directories
         """
