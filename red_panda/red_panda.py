@@ -21,6 +21,7 @@ from red_panda.templates.aws.redshift_admin_templates import (
     SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS, SQL_RUNNING_INFO, SQL_LOCK_INFO
 )
 from red_panda.errors import ReservedWordError, S3BucketExists, S3BucketNotExist, S3KeyNotExist
+from red_panda.utils import filter_kwargs, prettify_sql
 
 
 def map_types(columns_types):
@@ -50,10 +51,6 @@ def check_invalid_columns(columns):
     invalid_df_col_names = [c for c in columns if c in RESERVED_WORDS]
     if len(invalid_df_col_names) > 0:
         raise ReservedWordError('Redshift reserved words: f{invalid_df_col_names}')
-
-
-def filter_kwargs(full, ref):
-    return {k: v for k, v in full.items() if k in ref}
 
 
 def create_column_definition_single(d):
@@ -124,10 +121,6 @@ def create_column_definition_single(d):
 
 def create_column_definition(d):
     return ',\n'.join(f'{c} {create_column_definition_single(o)}' for c, o in d.items())
-
-
-def prettify_sql(sql):
-    return re.sub(r'\n\s*\n*', '\n', sql.lstrip())
 
 
 def join_s3_path(*args):
