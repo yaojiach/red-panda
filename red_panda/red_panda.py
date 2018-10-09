@@ -2,7 +2,6 @@
 import os
 import re
 import warnings
-from copy import deepcopy
 from collections import OrderedDict
 from io import StringIO, BytesIO
 from textwrap import dedent
@@ -121,15 +120,6 @@ def create_column_definition_single(d):
 
 def create_column_definition(d):
     return ',\n'.join(f'{c} {create_column_definition_single(o)}' for c, o in d.items())
-
-
-def join_s3_path(*args):
-    if len(args) >= 2:
-        l = deepcopy(list(args))
-        i = l[1]
-        if i[0] == '/':
-            l[1] = i[1:]
-    return os.path.join(*l)
 
 
 def set_aws_env_from_config(env, config):
@@ -712,7 +702,7 @@ class S3Utils(AWSUtils):
             folder = folder + '/'
         if prefix is None:
             prefix = '/'
-        pattern = join_s3_path(folder, prefix)
+        pattern = make_valid_uri(folder, prefix)
         allfiles = self.list_object_keys(bucket, pattern)
         allfiles = [f for f in allfiles if f != folder]
         dfs = []
@@ -1044,7 +1034,7 @@ class RedPanda(RedshiftUtils, S3Utils):
         {existing_keys}
         """
         warnings.warn(dedent(warn_message))
-        destination_option = join_s3_path(f's3://{bucket}', destination_option)
+        destination_option = make_valid_uri(f's3://{bucket}', destination_option)
         if bzip2 and gzip:
             raise ValueError('Only one of [bzip2, gzip] should be True')
         manifest_option = 'manifest' if manifest else ''
