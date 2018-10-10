@@ -23,20 +23,22 @@ setup(
     license='MIT',
     author='Jiachen Yao',
     maintainer='Jiachen Yao',
-    description='Pandas and AWS interoperability for data science.',
+    description='Data science on the cloud',
     long_description=readme,
     packages=find_packages(exclude=['tests']),
+    include_package_data=True,
     python_requires='>=3.6',
     install_requires=[
         'pandas',
         'psycopg2-binary',
         'boto3',
         'awscli',
-        'oss2'
+        'oss2',
+        'click',
+        'python-dotenv',
     ],
     extras_require={
         'dev': [
-            'python-dotenv',
             'pytest',
             'tox',
         ],
@@ -48,4 +50,8 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 3.6',
     ],
+    entry_points='''
+        [console_scripts]
+        redcli=red_panda.scripts.redcli:cli
+    ''',
 )
