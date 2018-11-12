@@ -11,6 +11,7 @@ botocore = "*"
 awscli = "*"
 "oss2" = "*"
 click = "*"
+requests = "*"
 
 [dev-packages]
 pylint = "*"
