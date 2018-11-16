@@ -827,7 +827,7 @@ class RedPanda(RedshiftUtils, S3Utils):
                 # self.run_query(create_template)
 
         s3_source = f's3://{bucket}/{key}'
-        quote_option = f"csv quote as '{quote_character}'" if delimiter == ',' else ''
+        quote_option = f"csv quote as '{quote_character}'" if delimiter == ',' and not escape else ''
         region_option = f"region '{region}'" if region is not None else ''
         escape_option = 'escape' if escape else ''
         acceptinvchars_option = f"acceptinvchars as '{acceptinvchars}'" \
