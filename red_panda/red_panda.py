@@ -212,7 +212,7 @@ class RedshiftUtils:
         return (data, columns)
 
     def cancel_query(self, pid, transaction=False):
-        self.run_query(f"cancel '{pid}'")
+        self.run_query(f"cancel {pid}")
         if transaction:
             self.run_query('abort')
 
