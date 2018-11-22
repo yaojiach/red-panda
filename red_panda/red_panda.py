@@ -13,11 +13,24 @@ import botocore
 from awscli.clidriver import create_clidriver
 
 from red_panda.constants import (
-    RESERVED_WORDS, TOCSV_KWARGS, READ_TABLE_KWARGS, COPY_KWARGS, S3_PUT_KWARGS, S3_GET_KWARGS, 
-    TYPES_MAP, S3_CREATE_BUCKET_KWARGS, AWSCLI_CREATE_CLUSTER_KWARGS, AWSCLI_CREATE_CLUSTER_ARGS
+    RESERVED_WORDS, 
+    TOCSV_KWARGS, 
+    READ_TABLE_KWARGS, 
+    COPY_KWARGS, 
+    S3_PUT_KWARGS, 
+    S3_GET_KWARGS, 
+    TYPES_MAP, 
+    S3_CREATE_BUCKET_KWARGS, 
+    AWSCLI_CREATE_CLUSTER_KWARGS, 
+    AWSCLI_CREATE_CLUSTER_ARGS
 )
 from red_panda.templates.aws.redshift_admin_templates import (
-    SQL_NUM_SLICES, SQL_TABLE_INFO, SQL_LOAD_ERRORS, SQL_RUNNING_INFO, SQL_LOCK_INFO
+    SQL_NUM_SLICES, 
+    SQL_TABLE_INFO, 
+    SQL_TABLE_INFO_SIMPLIFIED, 
+    SQL_LOAD_ERRORS, 
+    SQL_RUNNING_INFO, 
+    SQL_LOCK_INFO
 )
 from red_panda.errors import ReservedWordError, S3BucketExists, S3BucketNotExist, S3KeyNotExist
 from red_panda.utils import filter_kwargs, prettify_sql, make_valid_uri
@@ -235,8 +248,9 @@ class RedshiftUtils:
         else:
             return (data, columns)
 
-    def get_table_info(self, as_df=True):
-        return self.run_template(SQL_TABLE_INFO, as_df)
+    def get_table_info(self, as_df=True, simple=False):
+        sql = SQL_TABLE_INFO_SIMPLIFIED if simple else SQL_TABLE_INFO
+        return self.run_template(sql, as_df)
 
     def get_load_error(self, as_df=True):
         return self.run_template(SQL_LOAD_ERRORS, as_df)
