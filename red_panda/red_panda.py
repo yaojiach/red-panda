@@ -46,7 +46,7 @@ def map_types(columns_types):
         A dict of {original column name: mapped redshift data type}
     """
     return {c: {'data_type': TYPES_MAP.get(t.name)} \
-            if TYPES_MAP.get(t.name) is not None else 'varchar(256)' \
+            if TYPES_MAP.get(t.name) is not None else {'data_type': 'varchar(256)'} \
             for c, t in columns_types.items()}
 
 
