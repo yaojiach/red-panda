@@ -187,6 +187,17 @@ class RedshiftUtils:
         )
         return connection
 
+    def run_sql_from_file(self, fpath):
+        """Run a .sql file
+        
+        # TODO:
+            - Add error handling
+            - Add support for transactions
+        """
+        with open(fpath, 'r') as f:
+            sql = f.read()
+        self.run_query(sql)
+
     def run_query(self, sql, fetch=False):
         """Run generic SQL
 
