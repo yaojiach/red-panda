@@ -30,7 +30,8 @@ from red_panda.templates.aws.redshift_admin_templates import (
     SQL_TABLE_INFO_SIMPLIFIED, 
     SQL_LOAD_ERRORS, 
     SQL_RUNNING_INFO, 
-    SQL_LOCK_INFO
+    SQL_LOCK_INFO,
+    SQL_TRANSACT_INFO
 )
 from red_panda.errors import ReservedWordError, S3BucketExists, S3BucketNotExist, S3KeyNotExist
 from red_panda.utils import filter_kwargs, prettify_sql, make_valid_uri
@@ -271,6 +272,9 @@ class RedshiftUtils:
 
     def get_lock_info(self, as_df=True):
         return self.run_template(SQL_LOCK_INFO, as_df)
+
+    def get_transaction_info(self, as_df=True):
+        return self.run_template(SQL_TRANSACT_INFO, as_df)
 
     def redshift_to_df(self, sql):
         """Redshift results to Pandas DataFrame

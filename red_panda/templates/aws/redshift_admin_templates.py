@@ -148,3 +148,7 @@ lock_status
 from stv_locks 
 order by last_update asc
 """
+
+SQL_TRANSACT_INFO = """\
+select * from svv_transactions
+"""
