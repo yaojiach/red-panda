@@ -722,7 +722,7 @@ class S3Utils(AWSUtils):
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
         read_table_kwargs = filter_kwargs(kwargs, READ_TABLE_KWARGS)
         buffer = self.s3_to_obj(bucket, key, **s3_get_kwargs)
-        return pd.read_csv(buffer, sep='\t', **read_table_kwargs)
+        return pd.read_csv(buffer, **read_table_kwargs)
 
     def s3_folder_to_df(self, bucket, folder, prefix=None, silent=True, **kwargs):
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
