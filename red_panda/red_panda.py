@@ -288,7 +288,20 @@ class RedshiftUtils:
         data, columns = self.run_query(sql, fetch=True)
         data = pd.DataFrame(data, columns=columns)
         return data
-    
+
+    def redshift_to_file(self, sql, filename, **kwargs):
+        """Redshift results to Pandas DataFrame
+
+        # Arguments
+            sql: str, SQL query
+            filename: str, file name to save as
+        # Returns
+            None
+        """
+        data = self.redshift_to_df(sql)
+        to_csv_kwargs = filter_kwargs(kwargs, TOCSV_KWARGS)
+        data.to_csv(filename, **to_csv_kwargs)
+
     def create_table(
         self,
         table_name,
