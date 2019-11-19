@@ -1068,6 +1068,8 @@ class RedPanda(RedshiftUtils, S3Utils):
         destination_option = ''
         if path is not None:
             destination_option = os.path.join(destination_option, f'{path}')
+            if destination_option[-1] != '/':
+                destination_option = destination_option + '/'
         if prefix is not None:
             destination_option = os.path.join(destination_option, f'{prefix}')
         existing_keys = self._get_s3_pattern_existence(bucket, destination_option)
