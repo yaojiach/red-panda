@@ -9,10 +9,24 @@ def merge_dfs(dfs, **kwargs):
     return reduce(lambda df1, df2: pd.merge(df1, df2, **kwargs), dfs)
 
 
-def row_number(df, group_by, sort_by, ascending=True):
+def row_number(df, group_by, sort_by, col_name='row_number', ascending=True, as_series=False):
     """Create a row number series given a DataFrame lists of columns for group by and sort by
+
+    # Example:
+        ```python
+        df = row_number(df, ['group'], ['sort', 'order'])
+        df['rn] = row_number(df, ['group'], ['sort', 'order'], as_series=True)
+        ```
     """
-    return df.sort_values(sort_by, ascending=ascending).groupby(group_by).cumcount()
+    if as_series:
+        return df.sort_values(sort_by, ascending=ascending).groupby(group_by).cumcount()
+    else:
+        if col_name in list(df.columns):
+            raise ValueError(f'Column  {col_name} already exists.')
+        df[col_name] = df.sort_values(
+            sort_by, ascending=ascending
+        ).groupby(group_by).cumcount()
+        return df
 
 
 def _groupby_mutate(df, group_by, mutate):
