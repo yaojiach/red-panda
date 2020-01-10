@@ -401,8 +401,45 @@ class AWSUtils:
         self.aws_config = aws_config 
 
 
+class AthenaUtils(AWSUtils):
+    """AWS Athena operations
+
+    # Arguments:
+        s3_staging_dir: str, full S3 folder uri, i.e. s3://athena-query/results
+
+    # TODO: 
+        - Complete Support for other cursor types.
+        - Full parameters on `connect`
+    """
+    def __init__(self, aws_config=None):
+        super().__init__(aws_config=aws_config)
+        from pyathena import connect
+        self.cursor = connect(
+            aws_access_key_id=self.aws_config.get('aws_access_key_id'),
+            aws_secret_access_key=self.aws_config.get('aws_secret_access_key'),
+            s3_staging_dir=self.aws_config.get('s3_staging_dir'),
+            region_name=self.aws_config.get('region_name')
+        ).cursor()
+    
+    def run_sql(self, sql, as_pandas=False):
+        self.cursor.execute(sql)
+
+        if as_pandas:
+            from pyathena.util import as_pandas
+            return as_pandas(self.cursor)
+        
+        res = []
+        desc = self.cursor.description
+        for row in self.cursor:
+            r = {}
+            for i, c in enumerate(desc):
+                r[c[0]] = row[i]
+            res.append(r)
+        return res
+
+
 class EMRUtils(AWSUtils):
-    """ Base class for EMR operations
+    """AWS EMR operations
     """
     def __init__(self, aws_config=None):
         super().__init__(aws_config=aws_config)
@@ -545,7 +582,7 @@ class EMRUtils(AWSUtils):
 
 
 class S3Utils(AWSUtils):
-    """ Base class for S3 operations
+    """AWS S3 operations
     """
     def __init__(self, aws_config):
         super().__init__(aws_config=aws_config)
