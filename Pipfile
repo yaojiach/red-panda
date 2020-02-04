@@ -12,6 +12,8 @@ awscli = "*"
 "oss2" = "*"
 click = "*"
 requests = "*"
+pyathena = "*"
+dask = "*"
 
 [dev-packages]
 pylint = "*"
