@@ -82,3 +82,20 @@ def groupby_distinct(df, group_by, distinct):
     else:
         func_dict[distinct] = lambda x: x[distinct].nunique()
     return groupby_mutate(df, group_by, func_dict)
+
+
+def get_max_group2_in_group1(df, group1, group2):
+    """Select row with maximum count from group2 in group1
+
+    # Example
+        ```
+        df = pd.DataFrame({ 
+            'host' : ['this.com', 'this.com', 'this.com', 'that.com', 'other.net', 'other.net', 'other.net'],
+            'service' : ['mail', 'mail', 'web', 'mail', 'mail', 'web', 'web' ] })
+        get_max_group2_in_group1(df, 'host', 'service')
+        ```
+    """
+
+    df_indexed = df.groupby([group1, group2])[group2].agg(count='count')
+    mask = df_indexed.groupby(level=0).agg('idxmax')
+    return df_indexed.loc[mask['count']].reset_index()
