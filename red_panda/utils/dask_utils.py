@@ -29,7 +29,7 @@ def make_cat_feat(dd, feature, groups, prefix=None, pandas=False):
         if pandas:
             dd[featname] = 0
             dd.loc[dd[feature] == f, featname] = 1
-        else: # dask
+        else:  # dask
             dd[featname] = 1
             dd[featname] = dd[featname].where(dd[feature] == f, 0)
     return {'dd': dd, 'features': featnames}
@@ -38,19 +38,22 @@ def make_cat_feat(dd, feature, groups, prefix=None, pandas=False):
 # Dask custom function for group by count distinct
 def _group_by_count_distinct_chunk(s):
     """The function applied to the individual partition (map)
-    """   
+    """
     return s.apply(lambda x: list(set(x)))
+
 
 def _group_by_count_distinct_agg(s):
     """The function which will aggregate the result from all the partitions(reduce)
     """
-    s = s._selected_obj    
+    s = s._selected_obj
     return s.groupby(level=list(range(s.index.nlevels))).sum()
+
 
 def _group_by_count_distinct_finalize(s):
     """The optional functional that will be applied to the result of the agg functions
     """
     return s.apply(lambda x: len(set(x)))
+
 
 group_by_count_distinct = dd.Aggregation(
     'group_by_count_distinct',

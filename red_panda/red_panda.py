@@ -13,23 +13,23 @@ import botocore
 from awscli.clidriver import create_clidriver
 
 from red_panda.constants import (
-    RESERVED_WORDS, 
-    TOCSV_KWARGS, 
-    READ_TABLE_KWARGS, 
-    COPY_KWARGS, 
-    S3_PUT_KWARGS, 
-    S3_GET_KWARGS, 
-    TYPES_MAP, 
-    S3_CREATE_BUCKET_KWARGS, 
-    AWSCLI_CREATE_CLUSTER_KWARGS, 
+    RESERVED_WORDS,
+    TOCSV_KWARGS,
+    READ_TABLE_KWARGS,
+    COPY_KWARGS,
+    S3_PUT_KWARGS,
+    S3_GET_KWARGS,
+    TYPES_MAP,
+    S3_CREATE_BUCKET_KWARGS,
+    AWSCLI_CREATE_CLUSTER_KWARGS,
     AWSCLI_CREATE_CLUSTER_ARGS
 )
 from red_panda.templates.aws.redshift_admin_templates import (
-    SQL_NUM_SLICES, 
-    SQL_TABLE_INFO, 
-    SQL_TABLE_INFO_SIMPLIFIED, 
-    SQL_LOAD_ERRORS, 
-    SQL_RUNNING_INFO, 
+    SQL_NUM_SLICES,
+    SQL_TABLE_INFO,
+    SQL_TABLE_INFO_SIMPLIFIED,
+    SQL_LOAD_ERRORS,
+    SQL_RUNNING_INFO,
     SQL_LOCK_INFO,
     SQL_TRANSACT_INFO
 )
@@ -46,8 +46,8 @@ def map_types(columns_types):
     # Returns
         A dict of {original column name: mapped redshift data type}
     """
-    return {c: {'data_type': TYPES_MAP.get(t.name)} \
-            if TYPES_MAP.get(t.name) is not None else {'data_type': 'varchar(256)'} \
+    return {c: {'data_type': TYPES_MAP.get(t.name)}
+            if TYPES_MAP.get(t.name) is not None else {'data_type': 'varchar(256)'}
             for c, t in columns_types.items()}
 
 
@@ -63,7 +63,8 @@ def check_invalid_columns(columns):
     invalid_df_col_names = []
     invalid_df_col_names = [c for c in columns if c in RESERVED_WORDS]
     if len(invalid_df_col_names) > 0:
-        raise ReservedWordError('Redshift reserved words: f{invalid_df_col_names}')
+        raise ReservedWordError(
+            'Redshift reserved words: f{invalid_df_col_names}')
 
 
 def create_column_definition_single(d):
@@ -85,7 +86,7 @@ def create_column_definition_single(d):
             'references': None, # str
             'like': None, # str
         }
-    
+
     # TODO
         - Check validity of arguments before running, i.e. only one distkey is set. etc
     """
@@ -144,9 +145,11 @@ def set_aws_env_from_config(env, config):
     if config.get('aws_session_token') is not None:
         env['AWS_SESSION_TOKEN'] = config.get('aws_session_token')
     if config.get('metadata_service_timeout') is not None:
-        env['AWS_METADATA_SERVICE_TIMEOUT'] = config.get('metadata_service_timeout')
+        env['AWS_METADATA_SERVICE_TIMEOUT'] = config.get(
+            'metadata_service_timeout')
     if config.get('metadata_service_num_attempts') is not None:
-        env['AWS_METADATA_SERVICE_NUM_ATTEMPTS'] = config.get('metadata_service_num_attempts')
+        env['AWS_METADATA_SERVICE_NUM_ATTEMPTS'] = config.get(
+            'metadata_service_num_attempts')
     return env
 
 
@@ -174,6 +177,7 @@ def run_awscli(*cmd, config=None):
 class RedshiftUtils:
     """ Base class for Redshift operations
     """
+
     def __init__(self, redshift_config, debug=False):
         self.redshift_config = redshift_config
         self._debug = debug
@@ -190,7 +194,7 @@ class RedshiftUtils:
 
     def run_sql_from_file(self, fpath):
         """Run a .sql file
-        
+
         # TODO:
             - Add error handling
             - Add support for transactions
@@ -204,7 +208,7 @@ class RedshiftUtils:
 
         # Arguments
             sql: str
-        
+
             fetch: bool, if or not to return data from the query.
 
         # Returns
@@ -390,6 +394,7 @@ class RedshiftUtils:
 class AWSUtils:
     """ Base class for AWS operations
     """
+
     def __init__(self, aws_config):
         if aws_config is None:
             aws_config = {
@@ -398,7 +403,7 @@ class AWSUtils:
                 'aws_session_token': None,
                 'region_name': None
             }
-        self.aws_config = aws_config 
+        self.aws_config = aws_config
 
 
 class AthenaUtils(AWSUtils):
@@ -411,6 +416,7 @@ class AthenaUtils(AWSUtils):
         - Complete Support for other cursor types.
         - Full parameters on `connect`
     """
+
     def __init__(self, aws_config=None):
         super().__init__(aws_config=aws_config)
         from pyathena import connect
@@ -420,14 +426,14 @@ class AthenaUtils(AWSUtils):
             s3_staging_dir=self.aws_config.get('s3_staging_dir'),
             region_name=self.aws_config.get('region_name')
         ).cursor()
-    
+
     def run_sql(self, sql, as_pandas=False):
         self.cursor.execute(sql)
 
         if as_pandas:
             from pyathena.util import as_pandas
             return as_pandas(self.cursor)
-        
+
         res = []
         desc = self.cursor.description
         for row in self.cursor:
@@ -441,6 +447,7 @@ class AthenaUtils(AWSUtils):
 class EMRUtils(AWSUtils):
     """AWS EMR operations
     """
+
     def __init__(self, aws_config=None):
         super().__init__(aws_config=aws_config)
 
@@ -584,6 +591,7 @@ class EMRUtils(AWSUtils):
 class S3Utils(AWSUtils):
     """AWS S3 operations
     """
+
     def __init__(self, aws_config):
         super().__init__(aws_config=aws_config)
 
@@ -600,7 +608,7 @@ class S3Utils(AWSUtils):
             aws_session_token=self.aws_config.get('aws_session_token')
         )
         return s3
-    
+
     def _check_s3_bucket_existence(self, bucket):
         s3 = self.get_s3_client()
         try:
@@ -621,17 +629,19 @@ class S3Utils(AWSUtils):
 
     def _warn_s3_key_existence(self, bucket, key):
         if self._check_s3_key_existence(bucket, key):
-            warnings.warn(f'{key} exists in {bucket}. May cause data consistency issues.')
+            warnings.warn(
+                f'{key} exists in {bucket}. May cause data consistency issues.')
 
     def _get_s3_pattern_existence(self, bucket, pattern):
         s3 = self.get_s3_resource()
-        all_keys = [o.key for o in s3.Bucket(bucket).objects.all() if o.key.startswith(pattern)]
+        all_keys = [o.key for o in s3.Bucket(
+            bucket).objects.all() if o.key.startswith(pattern)]
         return all_keys
 
     def get_s3_resource(self):
         """Return a boto3 S3 resource"""
         return self._connect_s3()
-    
+
     def get_s3_client(self):
         """Return a boto3 S3 client"""
         return self._connect_s3().meta.client
@@ -662,7 +672,7 @@ class S3Utils(AWSUtils):
                 warnings.warn(f'{bucket} already exists')
         extra_kwargs = filter_kwargs(kwargs, S3_CREATE_BUCKET_KWARGS)
         res = s3.create_bucket(Bucket=bucket, **extra_kwargs)
-        if response:    
+        if response:
             return res
 
     def file_to_s3(self, file_name, bucket, key, **kwargs):
@@ -670,9 +680,9 @@ class S3Utils(AWSUtils):
 
         # Arguments
             file_name: str, path to file.
-        
+
             bucket: str, S3 bucket name.
-        
+
             key: str, S3 key.
 
             kwargs: ExtraArgs for boto3.client.upload_file().
@@ -680,16 +690,17 @@ class S3Utils(AWSUtils):
         s3 = self._connect_s3()
         self._warn_s3_key_existence(bucket, key)
         s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
-        s3.meta.client.upload_file(file_name, Bucket=bucket, Key=key, ExtraArgs=s3_put_kwargs)       
+        s3.meta.client.upload_file(
+            file_name, Bucket=bucket, Key=key, ExtraArgs=s3_put_kwargs)
 
     def df_to_s3(self, df, bucket, key, **kwargs):
         """Put DataFrame to S3
-        
+
         # Arguments
             df: pandas.DataFrame, source dataframe.
-        
+
             bucket: str, S3 bucket name.
-        
+
             key: str, S3 key.
 
             kwargs: kwargs for boto3.Bucket.put_object(); kwargs to pandas.DataFrame.to_csv().
@@ -700,14 +711,15 @@ class S3Utils(AWSUtils):
         df.to_csv(buffer, **to_csv_kwargs)
         self._warn_s3_key_existence(bucket, key)
         s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
-        s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
+        s3.Bucket(bucket).put_object(
+            Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
 
     def delete_from_s3(self, bucket, key, silent=True):
         """Delete object from S3
 
         # Arguments
             bucket: str, S3 bucket name.
-        
+
             key: str, S3 key.
         """
         s3 = self._connect_s3()
@@ -726,13 +738,13 @@ class S3Utils(AWSUtils):
         s3_bucket = self.get_s3_resource().Bucket(bucket)
         s3_bucket.objects.all().delete()
         s3_bucket.delete()
-    
+
     def s3_to_obj(self, bucket, key, **kwargs):
         """Read S3 object into memory as BytesIO
 
         # Arguments:
             bucket: str, S3 bucket name.
-        
+
             key: str, S3 key.
 
             kwargs: Defined kwargs for boto3.client.get_object().
@@ -746,7 +758,7 @@ class S3Utils(AWSUtils):
         """
         # Arguments:
             bucket: str, S3 bucket name.
-        
+
             key: str, S3 key.
 
             file_name: str, local file name.
@@ -755,7 +767,8 @@ class S3Utils(AWSUtils):
         """
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
         s3 = self.get_s3_resource()
-        s3.Bucket(bucket).download_file(Key=key, Filename=file_name, ExtraArgs=s3_get_kwargs)
+        s3.Bucket(bucket).download_file(
+            Key=key, Filename=file_name, ExtraArgs=s3_get_kwargs)
 
     def s3_to_df(self, bucket, key, **kwargs):
         """Read S3 object into memory as DataFrame
@@ -764,7 +777,7 @@ class S3Utils(AWSUtils):
 
         # Arguments:
             bucket: str, S3 bucket name.
-        
+
             key: str, S3 key.
 
             kwargs: Defined kwargs for pandas.read_table() and boto3.client.get_object().
@@ -790,8 +803,8 @@ class S3Utils(AWSUtils):
                 print(f'Reading file {f}')
             dfs.append(
                 self.s3_to_df(
-                    bucket, 
-                    f, 
+                    bucket,
+                    f,
                     **s3_get_kwargs,
                     **read_table_kwargs
                 )
@@ -801,7 +814,8 @@ class S3Utils(AWSUtils):
     def sync(self, source, destination, *args):
         """Sync two buckets or directories
         """
-        run_awscli('s3', 'sync', source, destination, *args, config=self.aws_config)
+        run_awscli('s3', 'sync', source, destination,
+                   *args, config=self.aws_config)
 
 
 class RedPanda(RedshiftUtils, S3Utils):
@@ -811,7 +825,7 @@ class RedPanda(RedshiftUtils, S3Utils):
 
     # Arguments
         redshift_conf: dict, Redshift configuration.
-    
+
         s3_conf: dict, S3 configuration.
 
         debug: bool, if True, queries will be printed instead of executed.
@@ -822,17 +836,17 @@ class RedPanda(RedshiftUtils, S3Utils):
         - https://github.com/getredash/redash for handling connections
         - https://github.com/agawronski/pandas_redshift for inspiration
     """
-    
+
     def __init__(self, redshift_config, aws_config=None, debug=False):
         RedshiftUtils.__init__(self, redshift_config, debug)
         S3Utils.__init__(self, aws_config)
 
     def s3_to_redshift(
-        self, 
-        bucket, 
-        key, 
-        table_name, 
-        column_definition=None, 
+        self,
+        bucket,
+        key,
+        table_name,
+        column_definition=None,
         append=False,
         delimiter=',',
         ignoreheader=1,
@@ -861,7 +875,7 @@ class RedPanda(RedshiftUtils, S3Utils):
 
         # Arguments
             bucket: str, S3 bucket name.
-            
+
             key: str, S3 key.
 
             table_name: str, Redshift table name (optional include schema name).
@@ -872,32 +886,34 @@ class RedPanda(RedshiftUtils, S3Utils):
             dropped and recreated.
 
             delimiter: str, delimiter of file. Default is ",".
-            
+
             ignoreheader: int, number of header lines to skip when COPY.
-            
+
             quote_character: str, QUOTE_CHARACTER for COPY. Only used when delimiter is ",".
             Default to '"'.
-            
+
             dateformat: str, TIMEFORMAT argument for COPY. Default is "auto". 
-            
+
             timeformat: str, TIMEFORMAT argument for COPY. Default is "auto".
-            
+
             acceptinvchars: bool, whether to include the ACCEPTINVCHAR argument in COPY.
-            
+
             escape: bool, whether to include the ESCAPE argument in COPY.
-            
+
             null: str, specify the NULL AS string.
-            
+
             region: str, S3 region.
 
             iam_role: str, use IAM Role for access control. This feature is untested.
         """
         if not append:
             if column_definition is None:
-                raise ValueError('column_definition cannot be None if append is False')
+                raise ValueError(
+                    'column_definition cannot be None if append is False')
             else:
                 drop_first = False if append else True
-                self.create_table(table_name, column_definition, drop_first=drop_first)
+                self.create_table(
+                    table_name, column_definition, drop_first=drop_first)
                 # drop_template = f'drop table if exists {table_name}'
                 # self.run_query(drop_template)
                 # column_definition_template = ','.join(f'{c} {t}' \
@@ -973,13 +989,13 @@ class RedPanda(RedshiftUtils, S3Utils):
         self.run_query(copy_template)
 
     def df_to_redshift(
-        self, 
-        df, 
-        table_name, 
+        self,
+        df,
+        table_name,
         bucket,
-        column_definition=None, 
-        append=False, 
-        path=None, 
+        column_definition=None,
+        append=False,
+        path=None,
         file_name=None,
         cleanup=True,
         **kwargs
@@ -988,35 +1004,36 @@ class RedPanda(RedshiftUtils, S3Utils):
 
         # Arguments
             df: pandas.DataFrame, source dataframe.
-        
+
             table_name: str, Redshift table name (optional include schema name).
-        
+
             bucket: str, S3 bucket name.
-        
+
             column_definition: dict, (optional) specify the column definition if for CREATE TABLE.
             If not given and append is False, data type will be inferred.
-        
+
             append: bool, if true, df will be appended to Redshift table, otherwise table will be
             dropped and recreated.
-        
+
             path: str, S3 key excluding file name.
-        
+
             file_name: str, if `fname` is None, filename will be randomly generated.
-        
+
             cleanup: bool, default true, S3 file will be deleted after COPY.
-        
+
             kwargs: keyword arguments to pass to Pandas `to_csv` and Redshift COPY. See 
             red_panda.constants for all implemented arguments.
         """
         to_csv_kwargs = filter_kwargs(kwargs, TOCSV_KWARGS)
         copy_kwargs = filter_kwargs(kwargs, COPY_KWARGS)
-        
+
         if column_definition is None:
             column_definition = map_types(OrderedDict(df.dtypes))
 
         if to_csv_kwargs.get('index'):
             if df.index.name:
-                full_column_definition = OrderedDict({df.index.name: df.index.dtype})
+                full_column_definition = OrderedDict(
+                    {df.index.name: df.index.dtype})
             else:
                 full_column_definition = OrderedDict({'index': df.index.dtype})
             full_column_definition = map_types(full_column_definition)
@@ -1043,10 +1060,10 @@ class RedPanda(RedshiftUtils, S3Utils):
                 self.delete_from_s3(bucket, s3_key)
 
     def redshift_to_s3(
-        self, 
-        sql, 
-        bucket, 
-        path=None, 
+        self,
+        sql,
+        bucket,
+        path=None,
         prefix=None,
         iam_role=None,
         manifest=False,
@@ -1068,7 +1085,7 @@ class RedPanda(RedshiftUtils, S3Utils):
             sql: str, SQL query
 
             bucket: str, S3 bucket name.
-            
+
             key: str, S3 key. Create if does not exist.
 
             prefix: str, prefix of the set of files.
@@ -1082,24 +1099,24 @@ class RedPanda(RedshiftUtils, S3Utils):
 
             fixedwidth: str, if not None, it will overwrite delimiter and use fixedwidth format
             instead.
-            
+
             encrypted: bool, whether or not the files should be encrypted.
-            
+
             bzip2: bool, whether or not the files should be compressed with bzip2.
-            
+
             gzip: bool, whether or not the files should be compressed with gzip.
-            
+
             addquotes: bool, whether or not values with delimiter characters should be quoted.
-            
+
             null: str, specify the NULL AS string.
-            
+
             escape: bool, whether to include the ESCAPE argument in UNLOAD.
-            
+
             allowoverwrite: bool, whether or not existing files should be overwritten. Redshift will
             fail with error message if this is False and there are existing files.
-            
+
             parallel: str, ON or OFF. Whether or not to use parallel and unload into multiple files.
-            
+
             maxfilesize: str, maxfilesize argument for UNLOAD.
         """
         destination_option = ''
@@ -1109,13 +1126,15 @@ class RedPanda(RedshiftUtils, S3Utils):
                 destination_option = destination_option + '/'
         if prefix is not None:
             destination_option = os.path.join(destination_option, f'{prefix}')
-        existing_keys = self._get_s3_pattern_existence(bucket, destination_option)
+        existing_keys = self._get_s3_pattern_existence(
+            bucket, destination_option)
         warn_message = f"""\
         These keys already exist. May cause data consistency issues.
         {existing_keys}
         """
         warnings.warn(dedent(warn_message))
-        destination_option = make_valid_uri(f's3://{bucket}', destination_option)
+        destination_option = make_valid_uri(
+            f's3://{bucket}', destination_option)
         if bzip2 and gzip:
             raise ValueError('Only one of [bzip2, gzip] should be True')
         manifest_option = 'manifest' if manifest else ''

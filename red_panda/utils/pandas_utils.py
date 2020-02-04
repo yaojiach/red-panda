@@ -36,7 +36,7 @@ def _groupby_mutate(df, group_by, mutate):
         ```python
         def def func(g):
             return g['b'] / g['b'].sum()
-        
+
         df['pct'] = groupby_mutate(df, ['a'], func)
         ```
     """
@@ -68,7 +68,7 @@ def groupby_mutate(df, group_by, func_dict):
         df,
         group_by,
         lambda x: pd.Series(
-            { col: func(x) for col, func in func_dict.items() },
+            {col: func(x) for col, func in func_dict.items()},
             index=list(func_dict.keys())
         )
     ).reset_index()

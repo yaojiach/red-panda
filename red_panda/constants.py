@@ -154,25 +154,25 @@ RESERVED_WORDS = [
 ]
 
 TOCSV_KWARGS = [
-    'path_or_buf', 
-    'sep', 
-    'na_rep', 
-    'float_format', 
-    'columns', 
-    'header', 
-    'index', 
-    'index_label', 
-    'mode', 
-    'encoding', 
-    'compression', 
-    'quoting', 
-    'quotechar', 
-    'line_terminator', 
-    'chunksize', 
-    'tupleize_cols', 
-    'date_format', 
-    'doublequote', 
-    'escapechar', 
+    'path_or_buf',
+    'sep',
+    'na_rep',
+    'float_format',
+    'columns',
+    'header',
+    'index',
+    'index_label',
+    'mode',
+    'encoding',
+    'compression',
+    'quoting',
+    'quotechar',
+    'line_terminator',
+    'chunksize',
+    'tupleize_cols',
+    'date_format',
+    'doublequote',
+    'escapechar',
     'decimal',
 ]
 
@@ -235,34 +235,34 @@ COPY_KWARGS = [
     'timeformat',
     'region',
     'null',
-    'escape', # bool
-    'acceptinvchars', # str
+    'escape',  # bool
+    'acceptinvchars',  # str
     'iam_role',
-    'acceptanydate', # bool
-    'column_list', # list[str]
-    'blanksasnull', # bool
-    'emptyasnull', # bool
-    'encoding', # str
-    'explicit_ids', # bool
-    'fillrecord', # bool
-    'ignoreblanklines', # bool
-    'removequotes', # bool
-    'roundec', # bool
-    'trimblanks', # bool
-    'truncatecolumns', # bool
+    'acceptanydate',  # bool
+    'column_list',  # list[str]
+    'blanksasnull',  # bool
+    'emptyasnull',  # bool
+    'encoding',  # str
+    'explicit_ids',  # bool
+    'fillrecord',  # bool
+    'ignoreblanklines',  # bool
+    'removequotes',  # bool
+    'roundec',  # bool
+    'trimblanks',  # bool
+    'truncatecolumns',  # bool
 ]
 
 UNLOAD_KWARGS = [
-    'manifest', # bool
+    'manifest',  # bool
     'delimiter',
     'fixedwidth',
-    'encrypted', # bool
-    'bzip2', # bool
-    'gzip', # bool
-    'addquotes', # bool
+    'encrypted',  # bool
+    'bzip2',  # bool
+    'gzip',  # bool
+    'addquotes',  # bool
     'null',
-    'escap', # bool
-    'allowoverwrite', # bool
+    'escap',  # bool
+    'allowoverwrite',  # bool
     'parallel',
     'maxfilesize',
 ]

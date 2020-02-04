@@ -32,28 +32,28 @@ def s3():
 
 @click.command()
 @click.option(
-    '-c', 
+    '-c',
     '--config',
     required=False,
     type=str,
     help='Config file path.'
 )
 @click.option(
-    '-b', 
+    '-b',
     '--bucket',
     required=True,
     type=str,
     help='S3 bucket name.'
 )
 @click.option(
-    '-k', 
+    '-k',
     '--key',
     required=True,
     type=str,
     help='S3 key.'
 )
 @click.option(
-    '-s', 
+    '-s',
     '--source',
     required=False,
     type=str,
@@ -66,28 +66,28 @@ def upload(config, bucket, key, source):
 
 @click.command()
 @click.option(
-    '-c', 
+    '-c',
     '--config',
     required=False,
     type=str,
     help='Config file path.'
 )
 @click.option(
-    '-b', 
+    '-b',
     '--bucket',
     required=True,
     type=str,
     help='S3 bucket name.'
 )
 @click.option(
-    '-k', 
+    '-k',
     '--key',
     required=True,
     type=str,
     help='S3 key.'
 )
 @click.option(
-    '-d', 
+    '-d',
     '--destination',
     required=False,
     type=str,
