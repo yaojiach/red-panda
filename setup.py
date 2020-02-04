@@ -36,7 +36,8 @@ setup(
         'oss2',
         'click',
         'python-dotenv',
-        'PyAthena'
+        'PyAthena',
+        'dask'
     ],
     extras_require={
         'dev': [
