@@ -1,7 +1,7 @@
 Red Panda
 =========
 
-.. image:: https://https://github.com/jucyai/red-panda/tree/master/artwork/logo.jpg
+.. image:: https://github.com/jucyai/red-panda/tree/master/artwork/logo.jpg
 
 Data science on the cloud without frustration.
 
