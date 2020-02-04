@@ -37,7 +37,9 @@ setup(
         'click',
         'python-dotenv',
         'PyAthena',
-        'dask'
+        'dask',
+        'dask[dataframe]',
+        'fsspec'
     ],
     extras_require={
         'dev': [
