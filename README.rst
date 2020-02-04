@@ -1,5 +1,7 @@
-Red Panda 🐼😊
-================
+Red Panda
+=========
+
+.. image:: https://https://github.com/jucyai/red-panda/tree/master/artwork/logo.jpg
 
 Data science on the cloud without frustration.
 
@@ -24,7 +26,7 @@ Installation
 ------------
 
 .. code-block:: console
-    
+
     $ pip install red-panda
 
 
@@ -68,7 +70,7 @@ Load your Pandas DataFrame into Redshift as a new table.
     rp.df_to_redshift(df, 'test_table', bucket=s3_bucket, path=s3_path, append=False)
 
 
-It is also possible to: 
+It is also possible to:
 
 - Upload a DataFrame or flat file to S3
 - Delete files from S3
@@ -86,13 +88,13 @@ It is also possible to:
 .. code-block:: python
 
     s3_key = s3_path + '/' + s3_file_name
-    
+
     # DataFrame uploaded to S3
     rp.df_to_s3(df, s3_bucket, s3_key)
-    
+
     # Delete a file on S3
     rp.delete_from_s3(s3_bucket, s3_key)
-    
+
     # Upload a local file to S3
     pd.to_csv(df, 'test_data.csv', index=False)
     rp.file_to_s3('test_data.csv', s3_bucket, s3_key)
