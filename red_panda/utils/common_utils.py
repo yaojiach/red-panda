@@ -31,3 +31,27 @@ def flatten(items):
                 yield sub_x
         else:
             yield x
+
+
+def index_of_dict_in_list(l, value, key=None):
+    """Get index of item (a dict) in list
+
+    # Example:
+    ```python
+    l = [
+        {'a': 1},
+        {'a': 2},
+        {'a': 3}
+    ]
+    index_of_dict_in_list(l, 2) # returns 1
+    ```
+    """
+    if key is None:
+        for i, d in enumerate(l):
+            if next(iter(d.values())) == value:
+                return i
+    else:
+        for i, d in enumerate(l):
+            if d[key] == value:
+                return i
+    raise ValueError('No value matched')
