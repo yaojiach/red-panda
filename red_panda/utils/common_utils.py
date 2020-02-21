@@ -48,7 +48,8 @@ def index_of_dict_in_list(l, value, key=None):
     """
     if key is None:
         for i, d in enumerate(l):
-            if next(iter(d.values())) == value:
+            v, = d.values()
+            if v == value:
                 return i
     else:
         for i, d in enumerate(l):
