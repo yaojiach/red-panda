@@ -3,11 +3,6 @@ Red Panda
 
 Data science on the cloud without frustration.
 
-Caveat
-------
-
-This package only works with Python >= 3.6 because of the heavy reliance on `f-string <https://www.python.org/dev/peps/pep-0498/>`_.
-
 
 Features
 --------
@@ -137,8 +132,19 @@ It is also possible to:
 For API documentation, visit https://red-panda.readthedocs.io/en/latest/.
 
 
+Caveat
+------
+
+This package only works with Python >= 3.6 because of the heavy reliance on `f-string <https://www.python.org/dev/peps/pep-0498/>`_.
+
+
 TODO
 ----
+
+Top priority:
+
+- Clean up and refactor: move utility functions to a separate package to support both local and cloud operations.
+- Update readme/quickstart.
 
 In no particular order:
 
@@ -149,15 +155,6 @@ In no particular order:
 - Explore using ``S3 Transfer Manager``'s ``upload_fileobj`` for ``df_to_s3`` to take advantage of automatic multipart upload.
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
 - Build cli to manage data outside of Python.
-
-In progress:
-
-- Support 阿里云, GCP
-- EMR create cluster from a config file
 - Take advantage of Redshift slices for parallel processing. Split files for COPY.
+- Support 阿里云, GCP, DO?
 
-Done:
-
-- Unload from Redshift to S3.
-- Handle when user does have implicit column that is the index in a DataFrame. Currently index is automatically dropped.
-- Add encryption options for files uploaded to S3. *By adding support for all kwargs for s3 put_object/upload_file methods.*
