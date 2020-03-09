@@ -29,7 +29,7 @@ def _create_security_groups(ec2_client, config):
                 'IpProtocol': 'TCP',
                 'FromPort': 0,
                 'ToPort': 65535,
-                'UserIdGroupPairs': [{'GroupName': }],
+                'UserIdGroupPairs': [{'GroupName': None}],
             },
         ]
 

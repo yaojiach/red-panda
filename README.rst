@@ -1,8 +1,6 @@
 Red Panda
 =========
 
-.. image:: https://raw.githubusercontent.com/jucyai/red-panda/master/artwork/logo.jpg
-
 Data science on the cloud without frustration.
 
 Caveat
