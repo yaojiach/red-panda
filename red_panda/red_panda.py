@@ -374,7 +374,7 @@ class RedshiftUtils:
         references_option = f'references ({", ".join(references)})' \
                             if references is not None else ''
         distkey_option = f'distkey({distkey})' if distkey is not None else ''
-        sortkey_option = f'{sortstyle} sortkey({" ".join(sortkey)})' if sortkey is not None else ''
+        sortkey_option = f'{sortstyle} sortkey({", ".join(sortkey)})' if sortkey is not None else ''
         create_template = f"""\
         create table {temp_option} {table_name} {exist_option} (
         {create_column_definition(column_definition)}
