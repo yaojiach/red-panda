@@ -95,8 +95,8 @@ It is also possible to:
     # Populate a Redshift table from S3 files
     # Use a dictionary for column definition, here we minimally define only data_type
     redshift_column_definition = {
-        'col1': {data_type: 'int'},
-        'col2': {data_type: 'int'},
+        'col1': {'data_type': 'int'},
+        'col2': {'data_type': 'int'},
     }
     rp.s3_to_redshift(
         s3_bucket, s3_key, 'test_table', column_definition=redshift_column_definition
