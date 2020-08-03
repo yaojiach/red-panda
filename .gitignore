@@ -2,7 +2,6 @@
 .DS_Store
 .vscode/
 lib/
-Pipfile.lock
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
