@@ -1,0 +1,25 @@
+{
+  "name": "red-panda-test-stack",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "ls": "tsc && cdk ls",
+    "deploy": "tsc && cdk deploy"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^10.17.0",
+    "typescript": "~3.7.2"
+  },
+  "dependencies": {
+    "@aws-cdk/aws-ec2": "^1.57.0",
+    "@aws-cdk/aws-iam": "^1.57.0",
+    "@aws-cdk/aws-redshift": "^1.57.0",
+    "@aws-cdk/aws-s3": "^1.57.0",
+    "@aws-cdk/core": "^1.57.0",
+    "dotenv": "^8.2.0"
+  }
+}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import re
 from copy import deepcopy
@@ -10,14 +9,14 @@ def filter_kwargs(full, ref):
 
 
 def prettify_sql(sql):
-    return re.sub(r'\n\s*\n*', '\n', sql.lstrip())
+    return re.sub(r"\n\s*\n*", "\n", sql.lstrip())
 
 
 def make_valid_uri(*args):
     if len(args) >= 2:
         l = deepcopy(list(args))
         i = l[1]
-        if i[0] == '/':
+        if i[0] == "/":
             l[1] = i[1:]
     return os.path.join(*l)
 
@@ -48,11 +47,11 @@ def index_of_dict_in_list(l, value, key=None):
     """
     if key is None:
         for i, d in enumerate(l):
-            v, = d.values()
+            (v,) = d.values()
             if v == value:
                 return i
     else:
         for i, d in enumerate(l):
             if d[key] == value:
                 return i
-    raise ValueError('No value matched')
+    raise ValueError("No value matched")

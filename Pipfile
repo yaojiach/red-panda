@@ -1,29 +1,23 @@
 [[source]]
+name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
-name = "pypi"
+
+[dev-packages]
+black = "*"
+pytest = "*"
+tox = "*"
 
 [packages]
 pandas = "*"
-"psycopg2-binary" = "*"
-"boto3" = "*"
+psycopg2-binary = "*"
+boto3 = "*"
 botocore = "*"
 awscli = "*"
-"oss2" = "*"
-click = "*"
-requests = "*"
 pyathena = "*"
-dask = "*"
 
-[dev-packages]
-pylint = "*"
-pytest = "*"
-tox = "*"
-sphinx = "*"
-twine = "*"
-sphinx-autobuild = "*"
-recommonmark = "*"
-restview = "*"
-sphinx-rtd-theme = "*"
-python-dotenv = "*"
-autopep8 = "*"
+[requires]
+python_version = "3.8"
+
+[pipenv]
+allow_prereleases = true

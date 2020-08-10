@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import io
 import re
 
@@ -6,56 +5,46 @@ from collections import OrderedDict
 from setuptools import setup, find_packages
 
 
-with io.open('README.rst', 'rt', encoding='utf8') as f:
+with open("README.md") as f:
     readme = f.read()
 
-with io.open('red_panda/__init__.py', 'rt', encoding='utf8') as f:
-    version = re.search(r'__version__ = \'(.*?)\'', f.read()).group(1)
+with io.open("red_panda/__init__.py", "rt") as f:
+    version = re.search(r"__version__ = \"(.*?)\"", f.read()).group(1)
 
 setup(
-    name='red-panda',
+    name="red-panda",
     version=version,
-    url='https://github.com/yaojiach/red-panda',
-    project_urls=OrderedDict((
-        ('Code', 'https://github.com/yaojiach/red-panda'),
-        ('Issue tracker', 'https://github.com/yaojiach/red-panda/issues'),
-    )),
-    license='MIT',
-    author='Jiachen Yao',
-    maintainer='Jiachen Yao',
-    description='Data science on the cloud',
+    url="https://github.com/jucyai/red-panda",
+    project_urls=OrderedDict(
+        (
+            ("Code", "https://github.com/jucyai/red-panda"),
+            ("Issue tracker", "https://github.com/jucyai/red-panda/issues"),
+        )
+    ),
+    license="MIT",
+    author="Jiachen Yao",
+    maintainer="Jiachen Yao",
+    description="Data science on the cloud",
+    long_description_content_type="text/markdown",
     long_description=readme,
-    packages=find_packages(exclude=['tests']),
+    packages=find_packages(exclude=["tests", "cdk"]),
     include_package_data=True,
-    python_requires='>=3.6',
+    python_requires=">=3.6",
     install_requires=[
-        'pandas',
-        'psycopg2-binary',
-        'boto3',
-        'awscli',
-        'oss2',
-        'click',
-        'python-dotenv',
-        'PyAthena',
-        'dask',
-        'dask[dataframe]',
-        'fsspec'
+        "pandas>=1.1.0",
+        "psycopg2-binary>=2.8.5",
+        "boto3>=1.14.38",
+        "botocore>=1.17.38",
+        "awscli>=1.18.115",
+        "PyAthena>=1.11.0"
     ],
-    extras_require={
-        'dev': [
-            'pytest',
-            'tox',
-        ],
-    },
     classifiers=[
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3.6',
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
-    entry_points='''
-        [console_scripts]
-        redcli=red_panda.scripts.redcli:cli
-    ''',
 )

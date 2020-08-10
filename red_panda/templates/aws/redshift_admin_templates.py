@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-SQL_NUM_SLICES = 'select count(1) from stv_slices'
+SQL_NUM_SLICES = "select count(1) from stv_slices"
 
-SQL_LOAD_ERRORS = 'select * from stl_load_errors order by starttime desc'
+SQL_LOAD_ERRORS = "select * from stl_load_errors order by starttime desc"
 
 SQL_TABLE_INFO = """\
 SELECT TRIM(pgn.nspname) AS SCHEMA,

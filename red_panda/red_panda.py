@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 import os
-import re
 import warnings
 from collections import OrderedDict
 from io import StringIO, BytesIO
 from textwrap import dedent
+import logging
 
 import pandas as pd
 import psycopg2
@@ -13,16 +12,14 @@ import botocore
 from awscli.clidriver import create_clidriver
 
 from red_panda.constants import (
-    RESERVED_WORDS,
-    TOCSV_KWARGS,
-    READ_TABLE_KWARGS,
-    COPY_KWARGS,
+    PANDAS_TOCSV_KWARGS,
+    PANDAS_READ_TABLE_KWARGS,
+    REDSHIFT_RESERVED_WORDS,
+    REDSHIFT_COPY_KWARGS,
     S3_PUT_KWARGS,
     S3_GET_KWARGS,
-    TYPES_MAP,
     S3_CREATE_BUCKET_KWARGS,
-    AWSCLI_CREATE_CLUSTER_KWARGS,
-    AWSCLI_CREATE_CLUSTER_ARGS
+    TYPES_MAP,
 )
 from red_panda.templates.aws.redshift_admin_templates import (
     SQL_NUM_SLICES,
@@ -31,10 +28,16 @@ from red_panda.templates.aws.redshift_admin_templates import (
     SQL_LOAD_ERRORS,
     SQL_RUNNING_INFO,
     SQL_LOCK_INFO,
-    SQL_TRANSACT_INFO
+    SQL_TRANSACT_INFO,
 )
-from red_panda.errors import ReservedWordError, S3BucketExists, S3BucketNotExist, S3KeyNotExist
+from red_panda.errors import (
+    ReservedWordError,
+    S3BucketExists,
+)
 from red_panda.utils import filter_kwargs, prettify_sql, make_valid_uri
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def map_types(columns_types):
@@ -46,9 +49,12 @@ def map_types(columns_types):
     # Returns
         A dict of {original column name: mapped redshift data type}
     """
-    return {c: {'data_type': TYPES_MAP.get(t.name)}
-            if TYPES_MAP.get(t.name) is not None else {'data_type': 'varchar(256)'}
-            for c, t in columns_types.items()}
+    return {
+        c: {"data_type": TYPES_MAP.get(t.name)}
+        if TYPES_MAP.get(t.name) is not None
+        else {"data_type": "varchar(256)"}
+        for c, t in columns_types.items()
+    }
 
 
 def check_invalid_columns(columns):
@@ -61,10 +67,9 @@ def check_invalid_columns(columns):
         `ReservedWordError`
     """
     invalid_df_col_names = []
-    invalid_df_col_names = [c for c in columns if c in RESERVED_WORDS]
+    invalid_df_col_names = [c for c in columns if c in REDSHIFT_RESERVED_WORDS]
     if len(invalid_df_col_names) > 0:
-        raise ReservedWordError(
-            'Redshift reserved words: f{invalid_df_col_names}')
+        raise ReservedWordError("Redshift reserved words: f{invalid_df_col_names}")
 
 
 def create_column_definition_single(d):
@@ -87,88 +92,91 @@ def create_column_definition_single(d):
             'like': None, # str
         }
 
-    # TODO
+    # TODO:
         - Check validity of arguments before running, i.e. only one distkey is set. etc
     """
-    data_type = d.get('data_type')
-    data_type_option = data_type if data_type is not None else 'varchar(256)'
-    default = d.get('default')
-    quote = "'" if not isinstance(default, (int, float, complex)) else ''
-    default_option = f"default {quote}{default}{quote}" if default is not None else ''
-    identity = d.get('identity')
+    data_type = d.get("data_type")
+    data_type_option = data_type if data_type is not None else "varchar(256)"
+    default = d.get("default")
+    quote = "'" if not isinstance(default, (int, float, complex)) else ""
+    default_option = f"default {quote}{default}{quote}" if default is not None else ""
+    identity = d.get("identity")
     if identity is not None:
         seed, step = identity
-        identity_option = f'identity({seed}, {step})'
+        identity_option = f"identity({seed}, {step})"
     else:
-        identity_option = ''
-    encode = d.get('encode')
-    encode_option = f'encode {encode}' if encode is not None else ''
-    distkey = d.get('distkey')
-    distkey_option = 'distkey' if distkey is not None and distkey else ''
-    sortkey = d.get('sortkey')
-    sortkey_option = 'sortkey' if sortkey is not None and sortkey else ''
-    nullable = d.get('nullable')
-    nullable_option = 'not null' if nullable is not None and not nullable else ''
-    unique = d.get('unique')
-    unique_option = 'unique' if unique is not None and unique else ''
-    primary_key = d.get('primary_key')
-    primary_key_option = 'primary key' if primary_key is not None and primary_key else ''
-    references = d.get('references')
-    references_option = f'references {references}' if references is not None else ''
-    like = d.get('like')
-    like_option = f'like {like}' if like is not None else ''
-    template = ' '.join([
-        data_type_option,
-        default_option,
-        identity_option,
-        encode_option,
-        distkey_option,
-        sortkey_option,
-        nullable_option,
-        unique_option,
-        primary_key_option,
-        references_option,
-        like_option
-    ])
-    return ' '.join(template.split())
+        identity_option = ""
+    encode = d.get("encode")
+    encode_option = f"encode {encode}" if encode is not None else ""
+    distkey = d.get("distkey")
+    distkey_option = "distkey" if distkey is not None and distkey else ""
+    sortkey = d.get("sortkey")
+    sortkey_option = "sortkey" if sortkey is not None and sortkey else ""
+    nullable = d.get("nullable")
+    nullable_option = "not null" if nullable is not None and not nullable else ""
+    unique = d.get("unique")
+    unique_option = "unique" if unique is not None and unique else ""
+    primary_key = d.get("primary_key")
+    primary_key_option = (
+        "primary key" if primary_key is not None and primary_key else ""
+    )
+    references = d.get("references")
+    references_option = f"references {references}" if references is not None else ""
+    like = d.get("like")
+    like_option = f"like {like}" if like is not None else ""
+    template = " ".join(
+        [
+            data_type_option,
+            default_option,
+            identity_option,
+            encode_option,
+            distkey_option,
+            sortkey_option,
+            nullable_option,
+            unique_option,
+            primary_key_option,
+            references_option,
+            like_option,
+        ]
+    )
+    return " ".join(template.split())
 
 
 def create_column_definition(d):
-    return ',\n'.join(f'{c} {create_column_definition_single(o)}' for c, o in d.items())
+    return ",\n".join(f"{c} {create_column_definition_single(o)}" for c, o in d.items())
 
 
 def set_aws_env_from_config(env, config):
-    if config.get('aws_access_key_id') is not None:
-        env['AWS_ACCESS_KEY_ID'] = config.get('aws_access_key_id')
-    if config.get('aws_secret_access_key') is not None:
-        env['AWS_SECRET_ACCESS_KEY'] = config.get('aws_secret_access_key')
-    if config.get('aws_session_token') is not None:
-        env['AWS_SESSION_TOKEN'] = config.get('aws_session_token')
-    if config.get('metadata_service_timeout') is not None:
-        env['AWS_METADATA_SERVICE_TIMEOUT'] = config.get(
-            'metadata_service_timeout')
-    if config.get('metadata_service_num_attempts') is not None:
-        env['AWS_METADATA_SERVICE_NUM_ATTEMPTS'] = config.get(
-            'metadata_service_num_attempts')
+    if config.get("aws_access_key_id") is not None:
+        env["AWS_ACCESS_KEY_ID"] = config.get("aws_access_key_id")
+    if config.get("aws_secret_access_key") is not None:
+        env["AWS_SECRET_ACCESS_KEY"] = config.get("aws_secret_access_key")
+    if config.get("aws_session_token") is not None:
+        env["AWS_SESSION_TOKEN"] = config.get("aws_session_token")
+    if config.get("metadata_service_timeout") is not None:
+        env["AWS_METADATA_SERVICE_TIMEOUT"] = config.get("metadata_service_timeout")
+    if config.get("metadata_service_num_attempts") is not None:
+        env["AWS_METADATA_SERVICE_NUM_ATTEMPTS"] = config.get(
+            "metadata_service_num_attempts"
+        )
     return env
 
 
 def run_awscli(*cmd, config=None):
     """Work around to run awscli commands for features not included in boto3
-
     # Example
         `run_awscli('s3', 'sync', 's3://bucket/source', 's3://bucket/destination', '--delete')`
     """
     old_env = os.environ.copy()
     try:
         env = os.environ.copy()
-        env['LC_CTYPE'] = 'en_US.UTF'
+        env["LC_CTYPE"] = "en_US.UTF"
         if config is not None:
             env = set_aws_env_from_config(env, config)
         os.environ.update(env)
         exit_code = create_clidriver().main([*cmd])
         if exit_code > 0:
-            raise RuntimeError(f'awscli exited with code {exit_code}')
+            raise RuntimeError(f"awscli exited with code {exit_code}")
     finally:
         os.environ.clear()
         os.environ.update(old_env)
@@ -184,11 +192,11 @@ class RedshiftUtils:
 
     def _connect_redshift(self):
         connection = psycopg2.connect(
-            user=self.redshift_config.get('user'),
-            password=self.redshift_config.get('password'),
-            host=self.redshift_config.get('host'),
-            port=self.redshift_config.get('port'),
-            dbname=self.redshift_config.get('dbname')
+            user=self.redshift_config.get("user"),
+            password=self.redshift_config.get("password"),
+            host=self.redshift_config.get("host"),
+            port=self.redshift_config.get("port"),
+            dbname=self.redshift_config.get("dbname"),
         )
         return connection
 
@@ -199,7 +207,7 @@ class RedshiftUtils:
             - Add error handling
             - Add support for transactions
         """
-        with open(fpath, 'r') as f:
+        with open(fpath, "r") as f:
             sql = f.read()
         self.run_query(sql)
 
@@ -216,7 +224,7 @@ class RedshiftUtils:
             list of column names.
         """
         if self._debug:
-            print(prettify_sql(sql))
+            LOGGER.info(prettify_sql(sql))
             return (None, None)
 
         conn = self._connect_redshift()
@@ -230,12 +238,12 @@ class RedshiftUtils:
                     columns = [desc[0] for desc in cursor.description]
                     data = cursor.fetchall()
                 else:
-                    print('Query completed but it returned no data.')
+                    LOGGER.warn("Query completed but it returned no data.")
             else:
                 conn.commit()
         except KeyboardInterrupt:
             conn.cancel()
-            print('User canceled query.')
+            LOGGER.warn("User canceled query.")
         finally:
             conn.close()
         return (data, columns)
@@ -243,18 +251,19 @@ class RedshiftUtils:
     def cancel_query(self, pid, transaction=False):
         self.run_query(f"cancel {pid}")
         if transaction:
-            self.run_query('abort')
+            self.run_query("abort")
 
     def kill_session(self, pid):
-        self.run_query(f'select pg_terminate_backend({pid})')
+        self.run_query(f"select pg_terminate_backend({pid})")
 
     def get_num_slices(self):
         """Get number of slices of a Redshift cluster"""
         data, _ = self.run_query(SQL_NUM_SLICES, fetch=True)
+        n_slices = None
         try:
             n_slices = data[0][0]
         except IndexError:
-            print('Could not derive number of slices of Redshift cluster.')
+            LOGGER.error("Could not derive number of slices of Redshift cluster.")
         return n_slices
 
     def run_template(self, sql, as_df=True):
@@ -303,7 +312,7 @@ class RedshiftUtils:
             None
         """
         data = self.redshift_to_df(sql)
-        to_csv_kwargs = filter_kwargs(kwargs, TOCSV_KWARGS)
+        to_csv_kwargs = filter_kwargs(kwargs, PANDAS_TOCSV_KWARGS)
         data.to_csv(filename, **to_csv_kwargs)
 
     def create_table(
@@ -312,16 +321,16 @@ class RedshiftUtils:
         column_definition,
         temp=False,
         if_not_exists=False,
-        backup='YES',
+        backup="YES",
         unique=None,
         primary_key=None,
         foreign_key=None,
         references=None,
-        diststyle='EVEN',
+        diststyle="EVEN",
         distkey=None,
-        sortstyle='COMPOUND',
+        sortstyle="COMPOUND",
         sortkey=None,
-        drop_first=False
+        drop_first=False,
     ):
         """Utility for creating table in Redshift
 
@@ -358,23 +367,29 @@ class RedshiftUtils:
 
             sortkey: list[str]
 
-        # TODO
+        # TODO:
             - Complete doctring
             - Check consistency between column_constraints and table_contraints
             - More rigorous testing
         """
         if drop_first:
-            self.run_query(f'drop table if exists {table_name}')
-        temp_option = 'temp' if temp else ''
-        exist_option = 'if not exists' if if_not_exists else ''
-        unique_option = f'unique ({", ".join(unique)})' if unique is not None else ''
-        primary_key_option = f'primary key ({primary_key})' if primary_key is not None else ''
-        foreign_key_option = f'foreign key ({", ".join(foreign_key)})' \
-                             if foreign_key is not None else ''
-        references_option = f'references ({", ".join(references)})' \
-                            if references is not None else ''
-        distkey_option = f'distkey({distkey})' if distkey is not None else ''
-        sortkey_option = f'{sortstyle} sortkey({", ".join(sortkey)})' if sortkey is not None else ''
+            self.run_query(f"drop table if exists {table_name}")
+        temp_option = "temp" if temp else ""
+        exist_option = "if not exists" if if_not_exists else ""
+        unique_option = f'unique ({", ".join(unique)})' if unique is not None else ""
+        primary_key_option = (
+            f"primary key ({primary_key})" if primary_key is not None else ""
+        )
+        foreign_key_option = (
+            f'foreign key ({", ".join(foreign_key)})' if foreign_key is not None else ""
+        )
+        references_option = (
+            f'references ({", ".join(references)})' if references is not None else ""
+        )
+        distkey_option = f"distkey({distkey})" if distkey is not None else ""
+        sortkey_option = (
+            f'{sortstyle} sortkey({", ".join(sortkey)})' if sortkey is not None else ""
+        )
         create_template = f"""\
         create table {temp_option} {table_name} {exist_option} (
         {create_column_definition(column_definition)}
@@ -398,10 +413,10 @@ class AWSUtils:
     def __init__(self, aws_config):
         if aws_config is None:
             aws_config = {
-                'aws_access_key_id': None,
-                'aws_secret_access_key': None,
-                'aws_session_token': None,
-                'region_name': None
+                "aws_access_key_id": None,
+                "aws_secret_access_key": None,
+                "aws_session_token": None,
+                "region_name": None,
             }
         self.aws_config = aws_config
 
@@ -420,11 +435,12 @@ class AthenaUtils(AWSUtils):
     def __init__(self, aws_config=None):
         super().__init__(aws_config=aws_config)
         from pyathena import connect
+
         self.cursor = connect(
-            aws_access_key_id=self.aws_config.get('aws_access_key_id'),
-            aws_secret_access_key=self.aws_config.get('aws_secret_access_key'),
-            s3_staging_dir=self.aws_config.get('s3_staging_dir'),
-            region_name=self.aws_config.get('region_name')
+            aws_access_key_id=self.aws_config.get("aws_access_key_id"),
+            aws_secret_access_key=self.aws_config.get("aws_secret_access_key"),
+            s3_staging_dir=self.aws_config.get("s3_staging_dir"),
+            region_name=self.aws_config.get("region_name"),
         ).cursor()
 
     def run_sql(self, sql, as_pandas=False):
@@ -432,6 +448,7 @@ class AthenaUtils(AWSUtils):
 
         if as_pandas:
             from pyathena.util import as_pandas
+
             return as_pandas(self.cursor)
 
         res = []
@@ -442,150 +459,6 @@ class AthenaUtils(AWSUtils):
                 r[c[0]] = row[i]
             res.append(r)
         return res
-
-
-class EMRUtils(AWSUtils):
-    """AWS EMR operations
-    """
-
-    def __init__(self, aws_config=None):
-        super().__init__(aws_config=aws_config)
-
-    @classmethod
-    def cli_to_config(cls, cli_cmd_str):
-        """Translate awscli's create-cluster command to boto3.emr.run_job_flow parameters
-
-        This is helpful when you manually configured EMR in AWS console and then export cli string
-        for repeated use.
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def validate_emr_create_cluster_config(cls, config):
-        raise NotImplementedError
-
-    def get_emr_client(self):
-        """Get EMR client
-
-        If key/secret are not provided, boto3's default behavior is falling back to awscli configs
-        and environment variables.
-        """
-        emr = boto3.client(
-            'emr',
-            aws_access_key_id=self.aws_config.get('aws_access_key_id'),
-            aws_secret_access_key=self.aws_config.get('aws_secret_access_key'),
-            aws_session_token=self.aws_config.get('aws_session_token'),
-            region_name=self.aws_config.get('region_name'),
-        )
-        return emr
-
-    def cli_create_cluster(self, *args):
-        """TODO: Use `run_job_flow` instead
-
-        # Example
-        ```
-        emr.cli_create_cluster(
-            '--auto-scaling-role', 'EMR_AutoScaling_DefaultRole',
-            '--applications', 
-            'Name=Hadoop', 
-            'Name=Hive',
-            'Name=Pig', 
-            'Name=Hue', 
-            'Name=Spark', 
-            'Name=Tez', 
-            'Name=Zeppelin',
-            '--ebs-root-volume-size', '32',
-            '--ec2-attributes', '''
-            {
-                "KeyName":"TODO-CHANGE-TO-ACTUAL",
-                "InstanceProfile":"EMR_EC2_DefaultRole",
-                "SubnetId":"TODO-CHANGE-TO-ACTUAL",
-                "EmrManagedSlaveSecurityGroup":"TODO-CHANGE-TO-ACTUAL",
-                "EmrManagedMasterSecurityGroup":"TODO-CHANGE-TO-ACTUAL",
-                "AdditionalMasterSecurityGroups":["TODO-CHANGE-TO-ACTUAL","TODO-CHANGE-TO-ACTUAL"]}
-            ''',
-            '--service-role', 'EMR_DefaultRole',
-            '--enable-debugging',
-            '--release-label', 'emr-5.16.0',
-            '--log-uri', 's3n://TODO-CHANGE-TO-ACTUAL/',
-            '--name', "TODO-CHANGE-TO-ACTUAL",
-            '--instance-groups', '''
-            [
-                {
-                    "InstanceCount":4,
-                    "EbsConfiguration":{
-                        "EbsBlockDeviceConfigs":[
-                            {
-                                "VolumeSpecification":{
-                                    "SizeInGB":32,"VolumeType":"gp2"
-                                },
-                                "VolumesPerInstance":1
-                            }
-                            ],
-                        "EbsOptimized":true
-                    },
-                    "InstanceGroupType":"CORE",
-                    "InstanceType":"m4.xlarge",
-                    "Name":"Core - 2"
-                },
-                {
-                    "InstanceCount":1,
-                    "EbsConfiguration":{
-                        "EbsBlockDeviceConfigs":[
-                            {
-                                "VolumeSpecification":{
-                                    "SizeInGB":32,
-                                    "VolumeType":"gp2"
-                                },
-                                "VolumesPerInstance":1
-                            }
-                            ]
-                    },
-                    "InstanceGroupType":"MASTER",
-                    "InstanceType":"m4.2xlarge",
-                    "Name":"Master - 1"}]
-            ''',
-            '--configurations', '''
-            [
-                {
-                    "Classification":"hive-site",
-                    "Properties":{
-                        "hive.metastore.client.factory.class":\
-                        "com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory"
-                    },
-                    "Configurations":[]
-                },
-                {
-                    "Classification":"spark-hive-site",
-                    "Properties":{
-                        "hive.metastore.client.factory.class":\
-                        "com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory"
-                    },
-                    "Configurations":[]
-                }
-            ]
-            ''',
-            '--scale-down-behavior', 'TERMINATE_AT_TASK_COMPLETION',
-            '--region', 'us-east-1'
-        )
-        ```
-        """
-        run_awscli('emr', 'create-cluster', *args, config=self.aws_config)
-
-    def create_cluster(self, config):
-        """create cluster from config file
-
-        # Returns
-            Cluster ID: string
-        """
-        emr_client = self.get_emr_client()
-        config = EMRUtils.validate_emr_create_cluster_config(config)
-        return emr_client.run_job_flow(**config)
-
-    def get_master_publicdns(self, cluster_id=None):
-        emr_client = self.get_emr_client()
-        desc = emr_client.describe_cluster(ClusterId=cluster_id)
-        return desc['Cluster']['MasterPublicDnsName']
 
 
 class S3Utils(AWSUtils):
@@ -602,10 +475,10 @@ class S3Utils(AWSUtils):
         and environment variables.
         """
         s3 = boto3.resource(
-            's3',
-            aws_access_key_id=self.aws_config.get('aws_access_key_id'),
-            aws_secret_access_key=self.aws_config.get('aws_secret_access_key'),
-            aws_session_token=self.aws_config.get('aws_session_token')
+            "s3",
+            aws_access_key_id=self.aws_config.get("aws_access_key_id"),
+            aws_secret_access_key=self.aws_config.get("aws_secret_access_key"),
+            aws_session_token=self.aws_config.get("aws_session_token"),
         )
         return s3
 
@@ -630,12 +503,14 @@ class S3Utils(AWSUtils):
     def _warn_s3_key_existence(self, bucket, key):
         if self._check_s3_key_existence(bucket, key):
             warnings.warn(
-                f'{key} exists in {bucket}. May cause data consistency issues.')
+                f"{key} exists in {bucket}. May cause data consistency issues."
+            )
 
     def _get_s3_pattern_existence(self, bucket, pattern):
         s3 = self.get_s3_resource()
-        all_keys = [o.key for o in s3.Bucket(
-            bucket).objects.all() if o.key.startswith(pattern)]
+        all_keys = [
+            o.key for o in s3.Bucket(bucket).objects.all() if o.key.startswith(pattern)
+        ]
         return all_keys
 
     def get_s3_resource(self):
@@ -649,15 +524,15 @@ class S3Utils(AWSUtils):
     def list_buckets(self):
         s3 = self.get_s3_client()
         response = s3.list_buckets()
-        buckets = [bucket['Name'] for bucket in response['Buckets']]
+        buckets = [bucket["Name"] for bucket in response["Buckets"]]
         return buckets
 
-    def list_object_keys(self, bucket, prefix=''):
+    def list_object_keys(self, bucket, prefix=""):
         s3 = self.get_s3_client()
         response = s3.list_objects(Bucket=bucket, Prefix=prefix)
-        return [o['Key'] for o in response['Contents']]
+        return [o["Key"] for o in response["Contents"]]
 
-    def create_bucket(self, bucket, error='warn', response=False, **kwargs):
+    def create_bucket(self, bucket, error="warn", response=False, **kwargs):
         """Check and create bucket
 
         # Argument
@@ -666,10 +541,10 @@ class S3Utils(AWSUtils):
         """
         s3 = self.get_s3_client()
         if self._check_s3_bucket_existence(bucket):
-            if error == 'raise':
-                raise S3BucketExists(f'{bucket} already exists')
-            elif error == 'warn':
-                warnings.warn(f'{bucket} already exists')
+            if error == "raise":
+                raise S3BucketExists(f"{bucket} already exists")
+            elif error == "warn":
+                warnings.warn(f"{bucket} already exists")
         extra_kwargs = filter_kwargs(kwargs, S3_CREATE_BUCKET_KWARGS)
         res = s3.create_bucket(Bucket=bucket, **extra_kwargs)
         if response:
@@ -691,7 +566,8 @@ class S3Utils(AWSUtils):
         self._warn_s3_key_existence(bucket, key)
         s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
         s3.meta.client.upload_file(
-            file_name, Bucket=bucket, Key=key, ExtraArgs=s3_put_kwargs)
+            file_name, Bucket=bucket, Key=key, ExtraArgs=s3_put_kwargs
+        )
 
     def df_to_s3(self, df, bucket, key, **kwargs):
         """Put DataFrame to S3
@@ -707,12 +583,11 @@ class S3Utils(AWSUtils):
         """
         s3 = self._connect_s3()
         buffer = StringIO()
-        to_csv_kwargs = filter_kwargs(kwargs, TOCSV_KWARGS)
+        to_csv_kwargs = filter_kwargs(kwargs, PANDAS_TOCSV_KWARGS)
         df.to_csv(buffer, **to_csv_kwargs)
         self._warn_s3_key_existence(bucket, key)
         s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
-        s3.Bucket(bucket).put_object(
-            Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
+        s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
 
     def delete_from_s3(self, bucket, key, silent=True):
         """Delete object from S3
@@ -727,12 +602,12 @@ class S3Utils(AWSUtils):
             s3.meta.client.delete_object(Bucket=bucket, Key=key)
         else:
             if not silent:
-                print(f'{bucket}: {key} does not exist.')
+                LOGGER.info(f"{bucket}: {key} does not exist.")
 
     def delete_bucket(self, bucket):
         """Delete bucket and all objects
 
-        # TODO
+        # TODO:
             Handle when there is bucket versioning
         """
         s3_bucket = self.get_s3_resource().Bucket(bucket)
@@ -752,7 +627,7 @@ class S3Utils(AWSUtils):
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
         s3 = self.get_s3_client()
         obj = s3.get_object(Bucket=bucket, Key=key, **s3_get_kwargs)
-        return BytesIO(obj['Body'].read())
+        return BytesIO(obj["Body"].read())
 
     def s3_to_file(self, bucket, key, file_name, **kwargs):
         """
@@ -768,7 +643,8 @@ class S3Utils(AWSUtils):
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
         s3 = self.get_s3_resource()
         s3.Bucket(bucket).download_file(
-            Key=key, Filename=file_name, ExtraArgs=s3_get_kwargs)
+            Key=key, Filename=file_name, ExtraArgs=s3_get_kwargs
+        )
 
     def s3_to_df(self, bucket, key, **kwargs):
         """Read S3 object into memory as DataFrame
@@ -783,39 +659,31 @@ class S3Utils(AWSUtils):
             kwargs: Defined kwargs for pandas.read_table() and boto3.client.get_object().
         """
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
-        read_table_kwargs = filter_kwargs(kwargs, READ_TABLE_KWARGS)
+        read_table_kwargs = filter_kwargs(kwargs, PANDAS_READ_TABLE_KWARGS)
         buffer = self.s3_to_obj(bucket, key, **s3_get_kwargs)
         return pd.read_csv(buffer, **read_table_kwargs)
 
     def s3_folder_to_df(self, bucket, folder, prefix=None, silent=True, **kwargs):
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
-        read_table_kwargs = filter_kwargs(kwargs, READ_TABLE_KWARGS)
-        if folder[-1] != '/':
-            folder = folder + '/'
+        read_table_kwargs = filter_kwargs(kwargs, PANDAS_READ_TABLE_KWARGS)
+        if folder[-1] != "/":
+            folder = folder + "/"
         if prefix is None:
-            prefix = '/'
+            prefix = "/"
         pattern = make_valid_uri(folder, prefix)
         allfiles = self.list_object_keys(bucket, pattern)
         allfiles = [f for f in allfiles if f != folder]
         dfs = []
         for f in allfiles:
             if not silent:
-                print(f'Reading file {f}')
-            dfs.append(
-                self.s3_to_df(
-                    bucket,
-                    f,
-                    **s3_get_kwargs,
-                    **read_table_kwargs
-                )
-            )
+                LOGGER.info(f"Reading file {f}")
+            dfs.append(self.s3_to_df(bucket, f, **s3_get_kwargs, **read_table_kwargs))
         return pd.concat(dfs)
 
     def sync(self, source, destination, *args):
         """Sync two buckets or directories
         """
-        run_awscli('s3', 'sync', source, destination,
-                   *args, config=self.aws_config)
+        run_awscli("s3", "sync", source, destination, *args, config=self.aws_config)
 
 
 class RedPanda(RedshiftUtils, S3Utils):
@@ -848,12 +716,12 @@ class RedPanda(RedshiftUtils, S3Utils):
         table_name,
         column_definition=None,
         append=False,
-        delimiter=',',
+        delimiter=",",
         ignoreheader=1,
         quote_character='"',
-        dateformat='auto',
-        timeformat='auto',
-        acceptinvchars='?',
+        dateformat="auto",
+        timeformat="auto",
+        acceptinvchars="?",
         acceptanydate=False,
         blanksasnull=False,
         emptyasnull=False,
@@ -869,7 +737,7 @@ class RedPanda(RedshiftUtils, S3Utils):
         truncatecolumns=False,
         column_list=None,
         region=None,
-        iam_role=None
+        iam_role=None,
     ):
         """Load S3 file into Redshift
 
@@ -908,12 +776,10 @@ class RedPanda(RedshiftUtils, S3Utils):
         """
         if not append:
             if column_definition is None:
-                raise ValueError(
-                    'column_definition cannot be None if append is False')
+                raise ValueError("column_definition cannot be None if append is False")
             else:
                 drop_first = False if append else True
-                self.create_table(
-                    table_name, column_definition, drop_first=drop_first)
+                self.create_table(table_name, column_definition, drop_first=drop_first)
                 # drop_template = f'drop table if exists {table_name}'
                 # self.run_query(drop_template)
                 # column_definition_template = ','.join(f'{c} {t}' \
@@ -921,41 +787,54 @@ class RedPanda(RedshiftUtils, S3Utils):
                 # create_template = f'create table {table_name} ({column_definition_template})'
                 # self.run_query(create_template)
 
-        s3_source = f's3://{bucket}/{key}'
-        quote_option = f"csv quote as '{quote_character}'" if delimiter == ',' and not escape else ''
-        region_option = f"region '{region}'" if region is not None else ''
-        escape_option = 'escape' if escape else ''
-        acceptinvchars_option = f"acceptinvchars as '{acceptinvchars}'" \
-                                if acceptinvchars is not None else ''
-        acceptanydate_option = 'acceptanydate' if acceptanydate else ''
-        blanksasnull_option = 'blanksasnull' if blanksasnull else ''
-        emptyasnull_option = 'emptyasnull' if emptyasnull else ''
-        explicit_ids_option = 'explicit_ids' if explicit_ids else ''
-        fillrecord_option = 'fillrecord' if fillrecord else ''
-        ignoreblanklines_option = 'ignoreblanklines' if ignoreblanklines else ''
-        removequotes_option = 'removequotes' if removequotes else ''
-        roundec_option = 'roundec' if roundec else ''
-        trimblanks_option = 'trimblanks' if trimblanks else ''
-        truncatecolumns_option = 'truncatecolumns' if truncatecolumns else ''
-        encoding_option = f'encoding as {encoding}' if encoding is not None else ''
-        null_option = f"null as '{null}'" if null is not None else ''
+        s3_source = f"s3://{bucket}/{key}"
+        quote_option = (
+            f"csv quote as '{quote_character}'"
+            if delimiter == "," and not escape
+            else ""
+        )
+        region_option = f"region '{region}'" if region is not None else ""
+        escape_option = "escape" if escape else ""
+        acceptinvchars_option = (
+            f"acceptinvchars as '{acceptinvchars}'"
+            if acceptinvchars is not None
+            else ""
+        )
+        acceptanydate_option = "acceptanydate" if acceptanydate else ""
+        blanksasnull_option = "blanksasnull" if blanksasnull else ""
+        emptyasnull_option = "emptyasnull" if emptyasnull else ""
+        explicit_ids_option = "explicit_ids" if explicit_ids else ""
+        fillrecord_option = "fillrecord" if fillrecord else ""
+        ignoreblanklines_option = "ignoreblanklines" if ignoreblanklines else ""
+        removequotes_option = "removequotes" if removequotes else ""
+        roundec_option = "roundec" if roundec else ""
+        trimblanks_option = "trimblanks" if trimblanks else ""
+        truncatecolumns_option = "truncatecolumns" if truncatecolumns else ""
+        encoding_option = f"encoding as {encoding}" if encoding is not None else ""
+        null_option = f"null as '{null}'" if null is not None else ""
         aws_access_key_id = self.aws_config.get("aws_access_key_id")
         aws_secret_access_key = self.aws_config.get("aws_secret_access_key")
-        if aws_access_key_id is None and aws_secret_access_key is None and iam_role is None:
+        if (
+            aws_access_key_id is None
+            and aws_secret_access_key is None
+            and iam_role is None
+        ):
             raise ValueError(
-                'Must provide at least one of [iam_role, aws_access_key_id/aws_secret_access_key]'
+                "Must provide at least one of [iam_role, aws_access_key_id/aws_secret_access_key]"
             )
         aws_token = self.aws_config.get("aws_session_token")
-        aws_token_option = f"session_token '{aws_token}'" if aws_token is not None else ''
+        aws_token_option = (
+            f"session_token '{aws_token}'" if aws_token is not None else ""
+        )
         if iam_role is not None:
             iam_role_option = f"iam_role '{iam_role}'"
-            access_key_id_option = ''
-            secret_access_key_option = ''
+            access_key_id_option = ""
+            secret_access_key_option = ""
         else:
-            iam_role_option = ''
+            iam_role_option = ""
             access_key_id_option = f"access_key_id '{aws_access_key_id}'"
             secret_access_key_option = f"secret_access_key '{aws_secret_access_key}'"
-        column_list_option = ''
+        column_list_option = ""
         if column_list is not None:
             column_list_option = f"({','.join(column_list)})"
         copy_template = f"""\
@@ -998,7 +877,7 @@ class RedPanda(RedshiftUtils, S3Utils):
         path=None,
         file_name=None,
         cleanup=True,
-        **kwargs
+        **kwargs,
     ):
         """Pandas DataFrame to Redshift table
 
@@ -1024,18 +903,17 @@ class RedPanda(RedshiftUtils, S3Utils):
             kwargs: keyword arguments to pass to Pandas `to_csv` and Redshift COPY. See 
             red_panda.constants for all implemented arguments.
         """
-        to_csv_kwargs = filter_kwargs(kwargs, TOCSV_KWARGS)
-        copy_kwargs = filter_kwargs(kwargs, COPY_KWARGS)
+        to_csv_kwargs = filter_kwargs(kwargs, PANDAS_TOCSV_KWARGS)
+        copy_kwargs = filter_kwargs(kwargs, REDSHIFT_COPY_KWARGS)
 
         if column_definition is None:
             column_definition = map_types(OrderedDict(df.dtypes))
 
-        if to_csv_kwargs.get('index'):
+        if to_csv_kwargs.get("index"):
             if df.index.name:
-                full_column_definition = OrderedDict(
-                    {df.index.name: df.index.dtype})
+                full_column_definition = OrderedDict({df.index.name: df.index.dtype})
             else:
-                full_column_definition = OrderedDict({'index': df.index.dtype})
+                full_column_definition = OrderedDict({"index": df.index.dtype})
             full_column_definition = map_types(full_column_definition)
             full_column_definition.update(column_definition)
             column_definition = full_column_definition
@@ -1043,8 +921,9 @@ class RedPanda(RedshiftUtils, S3Utils):
         check_invalid_columns(list(column_definition))
         if file_name is None:
             import time
-            file_name = f'redpanda-{int(time.time())}'
-        s3_key = os.path.join(path if path is not None else '', file_name)
+
+            file_name = f"redpanda-{int(time.time())}"
+        s3_key = os.path.join(path if path is not None else "", file_name)
         self.df_to_s3(df, bucket=bucket, key=s3_key, **to_csv_kwargs)
         try:
             self.s3_to_redshift(
@@ -1053,7 +932,7 @@ class RedPanda(RedshiftUtils, S3Utils):
                 table_name,
                 column_definition=column_definition,
                 append=append,
-                **copy_kwargs
+                **copy_kwargs,
             )
         finally:
             if cleanup:
@@ -1067,7 +946,7 @@ class RedPanda(RedshiftUtils, S3Utils):
         prefix=None,
         iam_role=None,
         manifest=False,
-        delimiter='|',
+        delimiter="|",
         fixedwidth=None,
         encrypted=False,
         bzip2=False,
@@ -1076,8 +955,8 @@ class RedPanda(RedshiftUtils, S3Utils):
         null=None,
         escape=False,
         allowoverwrite=False,
-        parallel='ON',
-        maxfilesize=None
+        parallel="ON",
+        maxfilesize=None,
     ):
         """Run sql and unload result to S3
 
@@ -1119,57 +998,63 @@ class RedPanda(RedshiftUtils, S3Utils):
 
             maxfilesize: str, maxfilesize argument for UNLOAD.
         """
-        destination_option = ''
+        destination_option = ""
         if path is not None:
-            destination_option = os.path.join(destination_option, f'{path}')
-            if destination_option[-1] != '/':
-                destination_option = destination_option + '/'
+            destination_option = os.path.join(destination_option, f"{path}")
+            if destination_option[-1] != "/":
+                destination_option = destination_option + "/"
         if prefix is not None:
-            destination_option = os.path.join(destination_option, f'{prefix}')
-        existing_keys = self._get_s3_pattern_existence(
-            bucket, destination_option)
+            destination_option = os.path.join(destination_option, f"{prefix}")
+        existing_keys = self._get_s3_pattern_existence(bucket, destination_option)
         warn_message = f"""\
         These keys already exist. May cause data consistency issues.
         {existing_keys}
         """
         warnings.warn(dedent(warn_message))
-        destination_option = make_valid_uri(
-            f's3://{bucket}', destination_option)
+        destination_option = make_valid_uri(f"s3://{bucket}", destination_option)
         if bzip2 and gzip:
-            raise ValueError('Only one of [bzip2, gzip] should be True')
-        manifest_option = 'manifest' if manifest else ''
+            raise ValueError("Only one of [bzip2, gzip] should be True")
+        manifest_option = "manifest" if manifest else ""
         delimiter_option = f"delimiter '{delimiter}'"
         if fixedwidth is not None:
             fixedwidth_option = f"fixedwidth '{fixedwidth}'"
-            delimiter_option = ''
+            delimiter_option = ""
         else:
-            fixedwidth_option = ''
-        encrypted_option = 'encrypted' if encrypted else ''
-        bzip2_option = 'bzip2' if bzip2 else ''
-        gzip_option = 'gzip' if gzip else ''
-        addquotes_option = 'addquotes' if addquotes else ''
-        null_option = f"null as '{null}'" if null is not None else ''
-        escape_option = 'escape' if escape else ''
-        allowoverwrite_option = 'allowoverwrite' if allowoverwrite else ''
+            fixedwidth_option = ""
+        encrypted_option = "encrypted" if encrypted else ""
+        bzip2_option = "bzip2" if bzip2 else ""
+        gzip_option = "gzip" if gzip else ""
+        addquotes_option = "addquotes" if addquotes else ""
+        null_option = f"null as '{null}'" if null is not None else ""
+        escape_option = "escape" if escape else ""
+        allowoverwrite_option = "allowoverwrite" if allowoverwrite else ""
         parallel_option = f"parallel {parallel}"
-        maxfilesize_option = f"maxfilesize '{maxfilesize}'" if maxfilesize is not None else ''
+        maxfilesize_option = (
+            f"maxfilesize '{maxfilesize}'" if maxfilesize is not None else ""
+        )
         aws_access_key_id = self.aws_config.get("aws_access_key_id")
         aws_secret_access_key = self.aws_config.get("aws_secret_access_key")
-        if aws_access_key_id is None and aws_secret_access_key is None and iam_role is None:
+        if (
+            aws_access_key_id is None
+            and aws_secret_access_key is None
+            and iam_role is None
+        ):
             raise ValueError(
-                'Must provide at least one of [iam_role, aws_access_key_id/aws_secret_access_key]'
+                "Must provide at least one of [iam_role, aws_access_key_id/aws_secret_access_key]"
             )
         aws_token = self.aws_config.get("aws_session_token")
-        aws_token_option = f"session_token '{aws_token}'" if aws_token is not None else ''
+        aws_token_option = (
+            f"session_token '{aws_token}'" if aws_token is not None else ""
+        )
         if iam_role is not None:
             iam_role_option = f"iam_role '{iam_role}'"
-            access_key_id_option = ''
-            secret_access_key_option = ''
+            access_key_id_option = ""
+            secret_access_key_option = ""
         else:
-            iam_role_option = ''
+            iam_role_option = ""
             access_key_id_option = f"access_key_id '{aws_access_key_id}'"
             secret_access_key_option = f"secret_access_key '{aws_secret_access_key}'"
-        sql = sql.replace('\n', ' ')
+        sql = sql.replace("\n", " ")
         unload_template = f"""\
         unload ('{sql}')
         to '{destination_option}'
