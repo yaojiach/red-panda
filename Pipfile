@@ -15,6 +15,7 @@ boto3 = "*"
 botocore = "*"
 awscli = "*"
 pyathena = "*"
+python-dotenv = "*"
 
 [requires]
 python_version = "3.8"
