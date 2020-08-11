@@ -46,9 +46,9 @@ export class RedPandaTestStack extends Stack {
     const cluster = new CfnCluster(this, 'RedPandaTestRedshift', {
       masterUsername: process.env.REDSHIFT_USERNAME || '',
       masterUserPassword: process.env.REDSHIFT_PASSWORD || '',
-      dbName: 'redpandatestdb',
+      dbName: process.env.REDSHIFT_DB || '',
       clusterType: 'single-node',
-      port: 5439,
+      port: parseInt(process.env.REDSHIFT_PORT || '5439'),
       nodeType: 'dc2.large',
       iamRoles: [role.roleArn],
       publiclyAccessible: true,
