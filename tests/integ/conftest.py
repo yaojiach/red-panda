@@ -1,3 +1,4 @@
+from logging import setLoggerClass
 import pytest
 import os
 import logging
@@ -13,11 +14,39 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--skip-cdk",
+        action="store_true",
+        help="Skip creating AWS stack. Default to skip.",
+    )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def aws(pytestconfig):
+    if pytestconfig.getoption("--skip-cdk"):
+        LOGGER.info("Skipping CDK Setup")
+        yield
+    else:
+        from subprocess import Popen, PIPE
+
+        LOGGER.info("Setup CDK stack")
+
+        p = Popen(["cdk", "ls"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
+        LOGGER.info(out)
+        if err != b"":
+            LOGGER.error(err)
+            raise RuntimeError("CDK stack failed to create.")
+        yield
+        LOGGER.info("Teardown CDK stack")
+
+
 @pytest.fixture(scope="module")
 def aws_config():
     return {
-        aws_access_key_id: AWS_ACCESS_KEY_ID,
-        aws_secret_access_key: AWS_SECRET_ACCESS_KEY,
+        "aws_access_key_id": AWS_ACCESS_KEY_ID,
+        "aws_secret_access_key": AWS_SECRET_ACCESS_KEY,
     }
 
 
@@ -28,11 +57,13 @@ def s3_bucket():
         aws_access_key_id=AWS_ACCESS_KEY_ID,
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     )
-    return [
+    buckets = [
         b["Name"]
         for b in s3_client.list_buckets()["Buckets"]
         if b["Name"].startswith(STACK_NAME)
-    ][0]
+    ]
+    bucket = buckets[0] if len(buckets) > 0 else ""
+    return bucket
 
 
 @pytest.fixture(scope="module")
@@ -42,14 +73,16 @@ def redshift_config():
         aws_access_key_id=AWS_ACCESS_KEY_ID,
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     )
+    clusters = [
+        c["Address"]
+        for c in redshift_client.describe_clusters()["Clusters"]
+        if c["ClusterIdentifier"].startswith(STACK_NAME)
+    ]
+    cluster = clusters[0] if len(clusters) > 0 else ""
     return {
         "user": os.environ("REDSHIFT_USERNAME"),
         "password": os.environ("REDSHIFT_PASSWORD"),
-        "host": [
-            c["Address"]
-            for c in redshift_client.describe_clusters()["Clusters"]
-            if c["ClusterIdentifier"].startswith(STACK_NAME)
-        ][0],
+        "host": cluster,
         "port": os.environ("REDSHIFT_PORT"),
         "dbname": os.environ("REDSHIFT_DB"),
     }
