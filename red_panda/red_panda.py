@@ -34,7 +34,7 @@ from red_panda.errors import (
     ReservedWordError,
     S3BucketExists,
 )
-from red_panda.utils import filter_kwargs, prettify_sql, make_valid_uri
+from red_panda.utils import filter_kwargs, prettify_sql, make_valid_uri, map_types
 
 
 LOGGER = logging.getLogger(__name__)
@@ -74,7 +74,6 @@ def check_invalid_columns(columns):
 
 def create_column_definition_single(d):
     """
-
     # Arguments
         d: dict, a dict of values to compose a single column definition, defaults:
         {
@@ -91,9 +90,6 @@ def create_column_definition_single(d):
             'references': None, # str
             'like': None, # str
         }
-
-    # TODO:
-        - Check validity of arguments before running, i.e. only one distkey is set. etc
     """
     data_type = d.get("data_type")
     data_type_option = data_type if data_type is not None else "varchar(256)"
@@ -204,7 +200,6 @@ class RedshiftUtils:
         """Run a .sql file
 
         # TODO:
-            - Add error handling
             - Add support for transactions
         """
         with open(fpath, "r") as f:
@@ -368,9 +363,7 @@ class RedshiftUtils:
             sortkey: list[str]
 
         # TODO:
-            - Complete doctring
-            - Check consistency between column_constraints and table_contraints
-            - More rigorous testing
+            - Check consistency between column_constraints and table_constraints
         """
         if drop_first:
             self.run_query(f"drop table if exists {table_name}")
