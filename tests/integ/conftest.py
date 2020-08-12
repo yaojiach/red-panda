@@ -14,6 +14,10 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 
 
+def empty_s3_bucket(bucket_name):
+    boto3.resource('s3').Bucket(bucket_name).objects.all().delete()
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--skip-cdk",
@@ -39,6 +43,7 @@ def aws(pytestconfig):
             raise RuntimeError("CDK stack failed to create.")
         yield
         LOGGER.info("Teardown CDK stack")
+        empty_s3_bucket(s3_bucket())
         p = Popen(["cdk", "destroy"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
         LOGGER.info(out)
