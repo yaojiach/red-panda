@@ -31,8 +31,7 @@ def aws(pytestconfig):
         from subprocess import Popen, PIPE
 
         LOGGER.info("Setup CDK stack")
-
-        p = Popen(["cdk", "ls"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        p = Popen(["cdk", "deploy"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
         LOGGER.info(out)
         if err != b"":
@@ -40,6 +39,12 @@ def aws(pytestconfig):
             raise RuntimeError("CDK stack failed to create.")
         yield
         LOGGER.info("Teardown CDK stack")
+        p = Popen(["cdk", "destroy"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
+        LOGGER.info(out)
+        if err != b"":
+            LOGGER.error(err)
+            raise RuntimeError("CDK stack failed to delete.")
 
 
 @pytest.fixture(scope="module")
