@@ -14,10 +14,6 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 
 
-def empty_s3_bucket(bucket_name):
-    boto3.resource('s3').Bucket(bucket_name).objects.all().delete()
-
-
 def pytest_addoption(parser):
     parser.addoption(
         "--skip-cdk",
@@ -35,7 +31,7 @@ def aws(pytestconfig):
         from subprocess import Popen, PIPE
 
         LOGGER.info("Setup CDK stack")
-        p = Popen(["cdk", "deploy"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        p = Popen(["cdk", "ls"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
         LOGGER.info(out)
         if err != b"":
@@ -43,8 +39,8 @@ def aws(pytestconfig):
             raise RuntimeError("CDK stack failed to create.")
         yield
         LOGGER.info("Teardown CDK stack")
-        empty_s3_bucket(s3_bucket())
-        p = Popen(["cdk", "destroy"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        empty_s3_bucket()
+        p = Popen(["cdk", "ls"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
         LOGGER.info(out)
         if err != b"":
@@ -60,8 +56,11 @@ def aws_config():
     }
 
 
-@pytest.fixture(scope="module")
-def s3_bucket():
+def empty_s3_bucket():
+    boto3.resource("s3").Bucket(get_s3_bucket()).objects.all().delete()
+
+
+def get_s3_bucket():
     s3_client = boto3.client(
         "s3",
         aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -74,6 +73,11 @@ def s3_bucket():
     ]
     bucket = buckets[0] if len(buckets) > 0 else ""
     return bucket
+
+
+@pytest.fixture(scope="module")
+def s3_bucket():
+    return get_s3_bucket()
 
 
 @pytest.fixture(scope="module")
