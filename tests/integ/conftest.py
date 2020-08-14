@@ -92,6 +92,21 @@ def s3_bucket():
 
 
 @pytest.fixture(scope="module")
+def iam_role_arn():
+    iam_client = boto3.client(
+        "iam",
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    )
+    roles = [
+        b["Arn"]
+        for b in iam_client.list_roles()["Roles"]
+        if b["RoleName"].lower().startswith(STACK_NAME)
+    ]
+    return roles[0] if len(roles) > 0 else ""
+
+
+@pytest.fixture(scope="module")
 def redshift_config():
     redshift_client = boto3.client(
         "redshift",
