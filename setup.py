@@ -34,7 +34,6 @@ setup(
         "pandas>=1.1.0",
         "psycopg2-binary>=2.8.5",
         "boto3>=1.14.38",
-        "botocore>=1.17.38",
         "awscli>=1.18.115",
         "PyAthena>=1.11.0"
     ],

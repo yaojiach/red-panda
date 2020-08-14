@@ -12,10 +12,11 @@ tox = "*"
 pandas = "*"
 psycopg2-binary = "*"
 boto3 = "*"
-botocore = "*"
 awscli = "*"
 pyathena = "*"
 python-dotenv = "*"
+botocore = "*"
+moto = "*"
 
 [requires]
 python_version = "3.8"

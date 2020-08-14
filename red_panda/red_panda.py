@@ -8,7 +8,6 @@ import logging
 import pandas as pd
 import psycopg2
 import boto3
-import botocore
 from awscli.clidriver import create_clidriver
 
 from red_panda.constants import (
@@ -30,10 +29,8 @@ from red_panda.templates.aws.redshift_admin_templates import (
     SQL_LOCK_INFO,
     SQL_TRANSACT_INFO,
 )
-from red_panda.errors import (
-    ReservedWordError,
-    S3BucketExists,
-)
+from red_panda.errors import ReservedWordError
+
 from red_panda.utils import filter_kwargs, prettify_sql, make_valid_uri
 
 
@@ -479,7 +476,8 @@ class S3Utils(AWSUtils):
         s3 = self.get_s3_client()
         try:
             s3.head_bucket(Bucket=bucket)
-        except botocore.exceptions.ClientError:
+        except s3.exceptions.ClientError:
+            LOGGER.warn(f"{bucket} does not exist or you do not have access to it.")
             return False
         else:
             return True
@@ -488,16 +486,13 @@ class S3Utils(AWSUtils):
         s3 = self.get_s3_client()
         try:
             s3.head_object(Bucket=bucket, Key=key)
-        except botocore.exceptions.ClientError:
+        except s3.exceptions.ClientError:
+            LOGGER.warn(
+                f"{bucket}/{key} does not exist or you do not have access to it."
+            )
             return False
         else:
             return True
-
-    def _warn_s3_key_existence(self, bucket, key):
-        if self._check_s3_key_existence(bucket, key):
-            warnings.warn(
-                f"{key} exists in {bucket}. May cause data consistency issues."
-            )
 
     def _get_s3_pattern_existence(self, bucket, pattern):
         s3 = self.get_s3_resource()
@@ -535,7 +530,7 @@ class S3Utils(AWSUtils):
         s3 = self.get_s3_client()
         if self._check_s3_bucket_existence(bucket):
             if error == "raise":
-                raise S3BucketExists(f"{bucket} already exists")
+                raise ValueError(f"{bucket} already exists")
             elif error == "warn":
                 warnings.warn(f"{bucket} already exists")
         extra_kwargs = filter_kwargs(kwargs, S3_CREATE_BUCKET_KWARGS)
@@ -556,7 +551,7 @@ class S3Utils(AWSUtils):
             kwargs: ExtraArgs for boto3.client.upload_file().
         """
         s3 = self._connect_s3()
-        self._warn_s3_key_existence(bucket, key)
+        self._check_s3_key_existence(bucket, key)
         s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
         s3.meta.client.upload_file(
             file_name, Bucket=bucket, Key=key, ExtraArgs=s3_put_kwargs
@@ -578,7 +573,7 @@ class S3Utils(AWSUtils):
         buffer = StringIO()
         to_csv_kwargs = filter_kwargs(kwargs, PANDAS_TOCSV_KWARGS)
         df.to_csv(buffer, **to_csv_kwargs)
-        self._warn_s3_key_existence(bucket, key)
+        self._check_s3_key_existence(bucket, key)
         s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
         s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
 
@@ -696,7 +691,9 @@ class RedPanda(RedshiftUtils, S3Utils):
         - https://github.com/agawronski/pandas_redshift for inspiration
     """
 
-    def __init__(self, redshift_config, aws_config=None, default_bucket=None, dryrun=False):
+    def __init__(
+        self, redshift_config, aws_config=None, default_bucket=None, dryrun=False
+    ):
         RedshiftUtils.__init__(self, redshift_config, dryrun)
         S3Utils.__init__(self, aws_config)
         self.default_bucket = default_bucket
@@ -1000,7 +997,7 @@ class RedPanda(RedshiftUtils, S3Utils):
             destination_option = make_valid_uri(destination_option, f"{prefix}")
         existing_keys = self._get_s3_pattern_existence(bucket, destination_option)
         warn_message = f"""\
-        These keys already exist. May cause data consistency issues.
+        These keys already exist. It may cause data consistency issues.
         {existing_keys}
         """
         warnings.warn(dedent(warn_message))
