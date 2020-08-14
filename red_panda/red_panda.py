@@ -34,7 +34,7 @@ from red_panda.errors import (
     ReservedWordError,
     S3BucketExists,
 )
-from red_panda.utils import filter_kwargs, prettify_sql, make_valid_uri, map_types
+from red_panda.utils import filter_kwargs, prettify_sql, make_valid_uri
 
 
 LOGGER = logging.getLogger(__name__)
