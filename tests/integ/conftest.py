@@ -1,4 +1,3 @@
-from logging import setLoggerClass
 import pytest
 import os
 import logging
