@@ -46,7 +46,7 @@ def aws(pytestconfig):
         LOGGER.info("Teardown CDK stack")
         empty_s3_bucket()
         p = Popen(
-            ["cdk", "destroy", "--require-approval", "never"],
+            ["cdk", "destroy", "--force"],
             cwd="cdk",
             stdin=PIPE,
             stdout=PIPE,
