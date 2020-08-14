@@ -93,9 +93,9 @@ def redshift_config():
     ]
     cluster = clusters[0] if len(clusters) > 0 else ""
     return {
-        "user": os.environ("REDSHIFT_USERNAME"),
-        "password": os.environ("REDSHIFT_PASSWORD"),
+        "user": os.getenv("REDSHIFT_USERNAME"),
+        "password": os.getenv("REDSHIFT_PASSWORD"),
         "host": cluster,
-        "port": os.environ("REDSHIFT_PORT"),
-        "dbname": os.environ("REDSHIFT_DB"),
+        "port": os.getenv("REDSHIFT_PORT"),
+        "dbname": os.getenv("REDSHIFT_DB"),
     }
