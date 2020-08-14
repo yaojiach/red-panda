@@ -8,6 +8,9 @@ def filter_kwargs(full, ref):
 
 
 def prettify_sql(sql):
+    sql = re.sub('(?<=access_key_id \')(.*)(?=\')', '*'*8, sql)
+    sql = re.sub('(?<=secret_access_key \')(.*)(?=\')', '*'*8, sql)
+    sql = re.sub('(?<=iam_role \')(.*)(?=\')', '*'*8, sql)
     return re.sub(r"\n\s*\n*", "\n", sql.lstrip())
 
 

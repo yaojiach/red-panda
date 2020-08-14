@@ -11,7 +11,6 @@ Data science on the cloud without frustration. This package only works with Pyth
 - Use built-in Redshift admin queries, such as checking running queries.
 - Use Redshift utility functions to easily accomplish common tasks such as create table.
 - Manage files on S3.
-- Also offers cli (feature not complete yet)
 
 ## Installation
 

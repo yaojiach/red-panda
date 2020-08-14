@@ -182,9 +182,9 @@ class RedshiftUtils:
     """ Base class for Redshift operations
     """
 
-    def __init__(self, redshift_config, debug=False):
+    def __init__(self, redshift_config, dryrun=False):
         self.redshift_config = redshift_config
-        self._debug = debug
+        self._dryrun = dryrun
 
     def _connect_redshift(self):
         connection = psycopg2.connect(
@@ -218,8 +218,8 @@ class RedshiftUtils:
             (data, columns) where data is a json/dict representation of the data and columns is a
             list of column names.
         """
-        if self._debug:
-            LOGGER.info(prettify_sql(sql))
+        LOGGER.info(prettify_sql(sql))
+        if self._dryrun:
             return (None, None)
 
         conn = self._connect_redshift()
@@ -479,7 +479,7 @@ class S3Utils(AWSUtils):
         s3 = self.get_s3_client()
         try:
             s3.head_bucket(Bucket=bucket)
-        except botocore.errorfactory.ClientError:
+        except botocore.exceptions.ClientError:
             return False
         else:
             return True
@@ -488,7 +488,7 @@ class S3Utils(AWSUtils):
         s3 = self.get_s3_client()
         try:
             s3.head_object(Bucket=bucket, Key=key)
-        except botocore.errorfactory.ClientError:
+        except botocore.exceptions.ClientError:
             return False
         else:
             return True
@@ -582,7 +582,7 @@ class S3Utils(AWSUtils):
         s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
         s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
 
-    def delete_from_s3(self, bucket, key, silent=True):
+    def delete_from_s3(self, bucket, key):
         """Delete object from S3
 
         # Arguments
@@ -594,8 +594,7 @@ class S3Utils(AWSUtils):
         if self._check_s3_key_existence(bucket, key):
             s3.meta.client.delete_object(Bucket=bucket, Key=key)
         else:
-            if not silent:
-                LOGGER.info(f"{bucket}: {key} does not exist.")
+            LOGGER.warn(f"{bucket}: {key} does not exist.")
 
     def delete_bucket(self, bucket):
         """Delete bucket and all objects
@@ -656,7 +655,7 @@ class S3Utils(AWSUtils):
         buffer = self.s3_to_obj(bucket, key, **s3_get_kwargs)
         return pd.read_csv(buffer, **read_table_kwargs)
 
-    def s3_folder_to_df(self, bucket, folder, prefix=None, silent=True, **kwargs):
+    def s3_folder_to_df(self, bucket, folder, prefix=None, **kwargs):
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
         read_table_kwargs = filter_kwargs(kwargs, PANDAS_READ_TABLE_KWARGS)
         if folder[-1] != "/":
@@ -668,8 +667,7 @@ class S3Utils(AWSUtils):
         allfiles = [f for f in allfiles if f != folder]
         dfs = []
         for f in allfiles:
-            if not silent:
-                LOGGER.info(f"Reading file {f}")
+            LOGGER.info(f"Reading file {f}")
             dfs.append(self.s3_to_df(bucket, f, **s3_get_kwargs, **read_table_kwargs))
         return pd.concat(dfs)
 
@@ -689,7 +687,7 @@ class RedPanda(RedshiftUtils, S3Utils):
 
         s3_conf: dict, S3 configuration.
 
-        debug: bool, if True, queries will be printed instead of executed.
+        dryrun: bool, if True, queries will be printed instead of executed.
 
     # References
         - https://docs.aws.amazon.com/redshift/latest/dg/r_COPY.html for COPY
@@ -698,9 +696,10 @@ class RedPanda(RedshiftUtils, S3Utils):
         - https://github.com/agawronski/pandas_redshift for inspiration
     """
 
-    def __init__(self, redshift_config, aws_config=None, debug=False):
-        RedshiftUtils.__init__(self, redshift_config, debug)
+    def __init__(self, redshift_config, aws_config=None, default_bucket=None, dryrun=False):
+        RedshiftUtils.__init__(self, redshift_config, dryrun)
         S3Utils.__init__(self, aws_config)
+        self.default_bucket = default_bucket
 
     def s3_to_redshift(
         self,
@@ -773,12 +772,6 @@ class RedPanda(RedshiftUtils, S3Utils):
             else:
                 drop_first = False if append else True
                 self.create_table(table_name, column_definition, drop_first=drop_first)
-                # drop_template = f'drop table if exists {table_name}'
-                # self.run_query(drop_template)
-                # column_definition_template = ','.join(f'{c} {t}' \
-                #                                       for c, t in column_definition.items())
-                # create_template = f'create table {table_name} ({column_definition_template})'
-                # self.run_query(create_template)
 
         s3_source = f"s3://{bucket}/{key}"
         quote_option = (
@@ -864,7 +857,7 @@ class RedPanda(RedshiftUtils, S3Utils):
         self,
         df,
         table_name,
-        bucket,
+        bucket=None,
         column_definition=None,
         append=False,
         path=None,
@@ -896,13 +889,18 @@ class RedPanda(RedshiftUtils, S3Utils):
             kwargs: keyword arguments to pass to Pandas `to_csv` and Redshift COPY. See 
             red_panda.constants for all implemented arguments.
         """
+        bridge_bucket = bucket or self.default_bucket
+        if not bridge_bucket:
+            raise ValueError("Either bucket or default_bucket must be provided.")
+
         to_csv_kwargs = filter_kwargs(kwargs, PANDAS_TOCSV_KWARGS)
         copy_kwargs = filter_kwargs(kwargs, REDSHIFT_COPY_KWARGS)
 
         if column_definition is None:
             column_definition = map_types(OrderedDict(df.dtypes))
 
-        if to_csv_kwargs.get("index"):
+        # default pandas behavior is true when index is not specified
+        if to_csv_kwargs.get("index") is None or to_csv_kwargs.get("index"):
             if df.index.name:
                 full_column_definition = OrderedDict({df.index.name: df.index.dtype})
             else:
@@ -912,15 +910,17 @@ class RedPanda(RedshiftUtils, S3Utils):
             column_definition = full_column_definition
 
         check_invalid_columns(list(column_definition))
-        if file_name is None:
-            import time
 
-            file_name = f"redpanda-{int(time.time())}"
-        s3_key = os.path.join(path if path is not None else "", file_name)
-        self.df_to_s3(df, bucket=bucket, key=s3_key, **to_csv_kwargs)
+        if file_name is None:
+            import uuid
+
+            file_name = f"redpanda-{uuid.uuid4()}"
+
+        s3_key = make_valid_uri(path if path is not None else "", file_name)
+        self.df_to_s3(df, bucket=bridge_bucket, key=s3_key, **to_csv_kwargs)
         try:
             self.s3_to_redshift(
-                bucket,
+                bridge_bucket,
                 s3_key,
                 table_name,
                 column_definition=column_definition,
@@ -929,7 +929,7 @@ class RedPanda(RedshiftUtils, S3Utils):
             )
         finally:
             if cleanup:
-                self.delete_from_s3(bucket, s3_key)
+                self.delete_from_s3(bridge_bucket, s3_key)
 
     def redshift_to_s3(
         self,
@@ -993,11 +993,11 @@ class RedPanda(RedshiftUtils, S3Utils):
         """
         destination_option = ""
         if path is not None:
-            destination_option = os.path.join(destination_option, f"{path}")
+            destination_option = make_valid_uri(destination_option, f"{path}")
             if destination_option[-1] != "/":
                 destination_option = destination_option + "/"
         if prefix is not None:
-            destination_option = os.path.join(destination_option, f"{prefix}")
+            destination_option = make_valid_uri(destination_option, f"{prefix}")
         existing_keys = self._get_s3_pattern_existence(bucket, destination_option)
         warn_message = f"""\
         These keys already exist. May cause data consistency issues.

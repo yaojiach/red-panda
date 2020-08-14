@@ -30,7 +30,13 @@ def aws(pytestconfig):
         from subprocess import Popen, PIPE
 
         LOGGER.info("Setup CDK stack")
-        p = Popen(["cdk", "ls"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        p = Popen(
+            ["cdk", "deploy", "--require-approval", "never"],
+            cwd="cdk",
+            stdin=PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
+        )
         out, err = p.communicate()
         LOGGER.info(out)
         if err != b"":
@@ -39,7 +45,13 @@ def aws(pytestconfig):
         yield
         LOGGER.info("Teardown CDK stack")
         empty_s3_bucket()
-        p = Popen(["cdk", "ls"], cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        p = Popen(
+            ["cdk", "destroy", "--require-approval", "never"],
+            cwd="cdk",
+            stdin=PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
+        )
         out, err = p.communicate()
         LOGGER.info(out)
         if err != b"":
@@ -87,7 +99,7 @@ def redshift_config():
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     )
     clusters = [
-        c["Address"]
+        c["Endpoint"]["Address"]
         for c in redshift_client.describe_clusters()["Clusters"]
         if c["ClusterIdentifier"].startswith(STACK_NAME)
     ]

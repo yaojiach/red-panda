@@ -329,4 +329,5 @@ TYPES_MAP = {
     "object": "varchar(256)",
     "int64": "bigint",
     "float64": "double precision",
+    "boolean": "boolean"
 }

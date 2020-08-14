@@ -1,9 +1,10 @@
-import pytest
-import logging
+import pandas as pd
+import numpy as np
 
-LOGGER = logging.getLogger(__name__)
+from red_panda.red_panda import map_types
 
 
-def test_is_unit():
-    LOGGER.debug("This is unit test.")
-    assert True
+def test_map_types():
+    PANDAS_TYPES = {"a": np.dtype("int64")}
+    REDSHIFT_TYPES = {"a": {"data_type": "bigint"}}
+    assert map_types(PANDAS_TYPES) == REDSHIFT_TYPES
