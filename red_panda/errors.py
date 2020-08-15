@@ -1,2 +1,0 @@
-class ReservedWordError(Exception):
-    pass

@@ -2,6 +2,7 @@ import pytest
 import os
 import logging
 import boto3
+from subprocess import Popen, PIPE
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,6 +12,16 @@ LOGGER = logging.getLogger(__name__)
 STACK_NAME = os.getenv("STACK_NAME")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+
+def cdk_run(args, info, msg):
+    LOGGER.info(info)
+    p = Popen(args, cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE,)
+    out, err = p.communicate()
+    LOGGER.info(out)
+    if err != b"":
+        LOGGER.error(err)
+        raise RuntimeError(msg)
 
 
 def pytest_addoption(parser):
@@ -26,37 +37,24 @@ def aws(pytestconfig):
     if pytestconfig.getoption("--skip-cdk"):
         LOGGER.info("Skipping CDK Setup")
         yield
+        LOGGER.info("No teardown needed")
     else:
-        from subprocess import Popen, PIPE
-
-        LOGGER.info("Setup CDK stack")
-        p = Popen(
+        # Setup
+        cdk_run(["npm", "run", "build"], "Building cdk", "npm build failed.")
+        cdk_run(
             ["cdk", "deploy", "--require-approval", "never"],
-            cwd="cdk",
-            stdin=PIPE,
-            stdout=PIPE,
-            stderr=PIPE,
+            "Setup CDK stack",
+            "CDK stack failed to create.",
         )
-        out, err = p.communicate()
-        LOGGER.info(out)
-        if err != b"":
-            LOGGER.error(err)
-            raise RuntimeError("CDK stack failed to create.")
+
         yield
-        LOGGER.info("Teardown CDK stack")
-        empty_s3_bucket()
-        p = Popen(
+
+        # Teardown
+        cdk_run(
             ["cdk", "destroy", "--force"],
-            cwd="cdk",
-            stdin=PIPE,
-            stdout=PIPE,
-            stderr=PIPE,
+            "Teardown CDK stack",
+            "CDK stack failed to delete.",
         )
-        out, err = p.communicate()
-        LOGGER.info(out)
-        if err != b"":
-            LOGGER.error(err)
-            raise RuntimeError("CDK stack failed to delete.")
 
 
 @pytest.fixture(scope="module")

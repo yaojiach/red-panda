@@ -1,76 +1,5 @@
-PANDAS_TOCSV_KWARGS = [
-    "path_or_buf",
-    "sep",
-    "na_rep",
-    "float_format",
-    "columns",
-    "header",
-    "index",
-    "index_label",
-    "mode",
-    "encoding",
-    "compression",
-    "quoting",
-    "quotechar",
-    "line_terminator",
-    "chunksize",
-    "tupleize_cols",
-    "date_format",
-    "doublequote",
-    "escapechar",
-    "decimal",
-]
-
-PANDAS_READ_TABLE_KWARGS = [
-    "sep",
-    "delimiter",
-    "header",
-    "names",
-    "index_col",
-    "usecols",
-    "squeeze",
-    "prefix",
-    "mangle_dupe_cols",
-    "dtype",
-    "engine",
-    "converters",
-    "true_values",
-    "false_values",
-    "skipinitialspace",
-    "skiprows",
-    "nrows",
-    "na_values",
-    "keep_default_na",
-    "na_filter",
-    "verbose",
-    "skip_blank_lines",
-    "parse_dates",
-    "infer_datetime_format",
-    "keep_date_col",
-    "date_parser",
-    "dayfirst",
-    "iterator",
-    "chunksize",
-    "compression",
-    "thousands",
-    "decimal",
-    "lineterminator",
-    "quotechar",
-    "quoting",
-    "escapechar",
-    "comment",
-    "encoding",
-    "dialect",
-    "tupleize_cols",
-    "error_bad_lines",
-    "warn_bad_lines",
-    "skipfooter",
-    "doublequote",
-    "delim_whitespace",
-    "low_memory",
-    "memory_map",
-    "float_precision",
-]
+import os
+from awscli.clidriver import create_clidriver
 
 REDSHIFT_RESERVED_WORDS = [
     "aes128",
@@ -324,10 +253,53 @@ S3_CREATE_BUCKET_KWARGS = [
     "GrantWriteACP",
 ]
 
-TYPES_MAP = {
-    "O": "varchar(256)",
-    "object": "varchar(256)",
-    "int64": "bigint",
-    "float64": "double precision",
-    "boolean": "boolean"
-}
+
+def set_aws_env_from_config(env, config):
+    if config.get("aws_access_key_id") is not None:
+        env["AWS_ACCESS_KEY_ID"] = config.get("aws_access_key_id")
+    if config.get("aws_secret_access_key") is not None:
+        env["AWS_SECRET_ACCESS_KEY"] = config.get("aws_secret_access_key")
+    if config.get("aws_session_token") is not None:
+        env["AWS_SESSION_TOKEN"] = config.get("aws_session_token")
+    if config.get("metadata_service_timeout") is not None:
+        env["AWS_METADATA_SERVICE_TIMEOUT"] = config.get("metadata_service_timeout")
+    if config.get("metadata_service_num_attempts") is not None:
+        env["AWS_METADATA_SERVICE_NUM_ATTEMPTS"] = config.get(
+            "metadata_service_num_attempts"
+        )
+    return env
+
+
+def run_awscli(*cmd, config=None):
+    """Work around to run awscli commands for features not included in boto3
+    # Example
+        `run_awscli('s3', 'sync', 's3://bucket/source', 's3://bucket/destination', '--delete')`
+    """
+    old_env = os.environ.copy()
+    try:
+        env = os.environ.copy()
+        env["LC_CTYPE"] = "en_US.UTF"
+        if config is not None:
+            env = set_aws_env_from_config(env, config)
+        os.environ.update(env)
+        exit_code = create_clidriver().main([*cmd])
+        if exit_code > 0:
+            raise RuntimeError(f"awscli exited with code {exit_code}")
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
+
+
+class AWSUtils:
+    """ Base class for AWS operations
+    """
+
+    def __init__(self, aws_config):
+        if aws_config is None:
+            aws_config = {
+                "aws_access_key_id": None,
+                "aws_secret_access_key": None,
+                "aws_session_token": None,
+                "region_name": None,
+            }
+        self.aws_config = aws_config

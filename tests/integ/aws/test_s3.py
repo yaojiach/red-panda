@@ -1,5 +1,5 @@
 import pytest
-from red_panda.red_panda import S3Utils
+from red_panda.aws.s3 import S3Utils
 
 import logging
 

@@ -2,15 +2,16 @@
 
 ![image](https://raw.githubusercontent.com/jucyai/red-panda/master/artwork/logo.jpg)
 
-Data science on the cloud without frustration. This package only works with Python \>= 3.6.
+Make interactions with cloud (AWS) easy in your Data Science workflow.
 
 ## Features
 
 - DataFrame/files to and from S3 and Redshift.
 - Run queries on Redshift in Python.
-- Use built-in Redshift admin queries, such as checking running queries.
-- Use Redshift utility functions to easily accomplish common tasks such as create table.
+- Use built-in Redshift admin queries, such as checking running queries and errors.
+- Use Redshift utility functions to easily accomplish common tasks such as creating a table.
 - Manage files on S3.
+- Query data on S3 directly with Athena.
 
 ## Installation
 
@@ -20,7 +21,7 @@ pip install red-panda
 
 ## Using red-panda
 
-Import `red-panda` and create an instance of `RedPanda`. If you create the instance with `debug` on (i.e. `rp = RedPanda(redshift_conf, s3_conf, debug=True)`), `red-panda` will print the planned queries instead of executing them.
+Import `red-panda` and create an instance of `RedPanda`. If you create the instance with `dryrun=True` (i.e. `rp = RedPanda(redshift_conf, s3_conf, dryrun=True)`), `red-panda` will print the planned queries instead of executing them.
 
 ```python
 from red_panda import RedPanda
@@ -62,12 +63,13 @@ It is also possible to:
 - Load S3 data into Redshift
 - Unload a Redshift query result to S3
 - Obtain a Redshift query result as a DataFrame
-- Run queries on Redshift
+- Run any query on Redshift
 - Download S3 file to local
 - Read S3 file in memory as DataFrame
 - Run built-in Redshift admin queries, such as getting running query information
 - Use utility functions such as `create_table` to quickly create tables in Redshift
-- Separate concerns by using `RedshiftUtils` or `S3Utils`
+- Run queries against S3 data directly with Athena using `AthenaUtils`
+- Use features separately with `RedshiftUtils`, `S3Utils`, `AthenaUtils`
 
 ```python
 s3_key = s3_path + '/' + s3_file_name
@@ -131,10 +133,5 @@ In no particular order:
 - Better ways of inferring data types from dataframe to Redshift.
 - Explore using `S3 Transfer Manager`'s `upload_fileobj` for `df_to_s3` to take advantage of automatic multipart upload.
 - Add COPY from S3 manifest file, in addition to COPY from S3 source path.
-- Build cli to manage data outside of Python.
-
-In progress:
-
 - Support multi-cloud.
-- EMR create cluster from a config file.
 - Take advantage of Redshift slices for parallel processing. Split files for COPY.
