@@ -272,8 +272,11 @@ def set_aws_env_from_config(env, config):
 
 def run_awscli(*cmd, config=None):
     """Work around to run awscli commands for features not included in boto3
+    
     # Example
-        `run_awscli('s3', 'sync', 's3://bucket/source', 's3://bucket/destination', '--delete')`
+        ```python
+        run_awscli('s3', 'sync', 's3://bucket/source', 's3://bucket/destination', '--delete')
+        ````
     """
     old_env = os.environ.copy()
     try:
@@ -291,8 +294,7 @@ def run_awscli(*cmd, config=None):
 
 
 class AWSUtils:
-    """ Base class for AWS operations
-    """
+    """ Base class for AWS operations"""
 
     def __init__(self, aws_config):
         if aws_config is None:

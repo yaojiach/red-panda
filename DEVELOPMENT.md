@@ -22,3 +22,12 @@ tox -e integ -- --skip-cdk
 # Run a single test
 tox -e unit -- -k test_groupby_distinct
 ```
+
+## Documentation
+
+```sh
+cd docs
+rm -r build
+sphinx-apidoc -f -o source ../red_panda
+make html
+```
