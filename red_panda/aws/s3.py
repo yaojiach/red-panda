@@ -118,7 +118,7 @@ class S3Utils(AWSUtils):
             kwargs: ExtraArgs for boto3.client.upload_file().
         """
         s3 = self._connect_s3()
-        self._check_s3_key_existence(bucket, key)
+        self._check_s3_bucket_existence(bucket)
         s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
         s3.meta.client.upload_file(
             file_name, Bucket=bucket, Key=key, ExtraArgs=s3_put_kwargs
@@ -140,7 +140,7 @@ class S3Utils(AWSUtils):
         buffer = StringIO()
         to_csv_kwargs = filter_kwargs(kwargs, PANDAS_TOCSV_KWARGS)
         df.to_csv(buffer, **to_csv_kwargs)
-        self._check_s3_key_existence(bucket, key)
+        self._check_s3_bucket_existence(bucket)
         s3_put_kwargs = filter_kwargs(kwargs, S3_PUT_KWARGS)
         s3.Bucket(bucket).put_object(Key=key, Body=buffer.getvalue(), **s3_put_kwargs)
 
