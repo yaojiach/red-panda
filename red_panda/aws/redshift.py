@@ -1,4 +1,5 @@
 import logging
+from typing import Union, List
 import pandas as pd
 import psycopg2
 
@@ -18,24 +19,29 @@ from red_panda.utils import filter_kwargs, prettify_sql
 LOGGER = logging.getLogger(__name__)
 
 
-def create_column_definition_single(d):
-    """
-    # Arguments
-        d: dict, a dict of values to compose a single column definition, defaults:
-        {
-            'data_type': 'varchar(256)', # str
-            'default': None, # Any
-            'identity': None, # tuple
-            'encode': None, # str
-            'distkey': False,
-            'sortkey': False,
-            'nullable': True,
-            'unique': False,
-            'primary_key': False,
-            'foreign_key': False,
-            'references': None, # str
-            'like': None, # str
-        }
+def create_column_definition_single(d: dict):
+    """Create the column definition for a single column.
+
+    Args:
+        d: A `dict` of values to compose a single column definition, defaults::
+
+                {
+                    "data_type": "varchar(256)", # str
+                    "default": None, # Any
+                    "identity": None, # tuple
+                    "encode": None, # str
+                    "distkey": False,
+                    "sortkey": False,
+                    "nullable": True,
+                    "unique": False,
+                    "primary_key": False,
+                    "foreign_key": False,
+                    "references": None, # str
+                    "like": None, # str
+                }
+    
+    Returns:
+        str: Single column definition for Redshift.
     """
     data_type = d.get("data_type")
     data_type_option = data_type if data_type is not None else "varchar(256)"
@@ -84,15 +90,30 @@ def create_column_definition_single(d):
     return " ".join(template.split())
 
 
-def create_column_definition(d):
+def create_column_definition(d: dict):
+    """Create full column definition string for Redshift.
+
+    Args:
+        d: A `dict` if single column definitions, where the keys are column names.
+
+    Returns:
+        str: Full column definition for Redshift.
+    """
     return ",\n".join(f"{c} {create_column_definition_single(o)}" for c, o in d.items())
 
 
 class RedshiftUtils:
-    """ Base class for Redshift operations
+    """ Base class for Redshift operations.
+
+    Args:
+        redshift_conf: Redshift configuration.
+        dryrun (optional): If True, queries will be printed instead of executed.
+    
+    Attributes:
+        redshift_conf (dict): Redshift configuration.
     """
 
-    def __init__(self, redshift_config, dryrun=False):
+    def __init__(self, redshift_config: dict, dryrun: bool = False):
         self.redshift_config = redshift_config
         self._dryrun = dryrun
 
@@ -106,29 +127,32 @@ class RedshiftUtils:
         )
         return connection
 
-    def run_sql_from_file(self, fpath):
-        """Run a .sql file
+    def run_sql_from_file(self, filename: str):
+        """Run a `.sql` file.
 
-        # TODO:
-            - Add support for transactions
+        Args:
+            filename: SQL file to be run.
+
+        TODO:
+            * Add support for transactions.
         """
-        with open(fpath, "r") as f:
+        with open(filename, "r") as f:
             sql = f.read()
         self.run_query(sql)
 
-    def run_query(self, sql, fetch=False):
-        """Run generic SQL
+    def run_query(self, sql: str, fetch: bool = False):
+        """Run a SQL query.
 
-        # Arguments
-            sql: str
+        Args:
+            sql: SQL string.
+            fetch (optional): Whether to return data from the query.
 
-            fetch: bool, if or not to return data from the query.
-
-        # Returns
-            (data, columns) where data is a json/dict representation of the data and columns is a
-            list of column names.
+        Returns:
+            Tuple[dict, list]: (data, columns) where data is a json/dict representation of the data 
+            and columns is a list of column names.
         """
         LOGGER.info(prettify_sql(sql))
+
         if self._dryrun:
             return (None, None)
 
@@ -153,16 +177,34 @@ class RedshiftUtils:
             conn.close()
         return (data, columns)
 
-    def cancel_query(self, pid, transaction=False):
+    def cancel_query(self, pid: Union[str, int], transaction: bool = False):
+        """Cancels a running query given pid.
+
+        Args:
+            pid: PID of a running query in Redshift.
+            transaction (optional): Whether the running query is a transaction.
+        """
         self.run_query(f"cancel {pid}")
         if transaction:
             self.run_query("abort")
 
-    def kill_session(self, pid):
+    def kill_session(self, pid: Union[str, int]):
+        """ Kill a session given pid.
+
+        Args:
+            pid: PID of a running query in Redshift.
+        """
         self.run_query(f"select pg_terminate_backend({pid})")
 
     def get_num_slices(self):
-        """Get number of slices of a Redshift cluster"""
+        """Get number of slices of a Redshift cluster.
+        
+        Returns:
+            int: Number of slices of the connected cluster.
+
+        Raises:
+            IndexError: When Redshift returns invalid number of slices.
+        """
         data, _ = self.run_query(SQL_NUM_SLICES, fetch=True)
         n_slices = None
         try:
@@ -171,50 +213,100 @@ class RedshiftUtils:
             LOGGER.error("Could not derive number of slices of Redshift cluster.")
         return n_slices
 
-    def run_template(self, sql, as_df=True):
+    def run_template(self, sql: str, as_df: bool = True):
+        """Utility method to run a pre-defined sql template.
+
+        Args:
+            sql: SQL string.
+            as_df (optional): Whether or not to return the result as a `pandas.DataFrame`.
+
+        Returns:
+            Union[pandas.DataFrame, Tuple[dict, list]]: Either return a DataFrame/table of the 
+            template query result or the raw form as specified in `run_query`.
+        """
         data, columns = self.run_query(sql, fetch=True)
         if as_df:
             return pd.DataFrame(data, columns=columns)
         else:
             return (data, columns)
 
-    def get_table_info(self, as_df=True, simple=False):
+    def get_table_info(self, as_df: bool = True, simple: bool = False):
+        """Utility to get table information in the cluster.
+
+        Args:
+            as_df (optional): Whether or not to return the result as a `pandas.DataFrame`.
+            simple (optional): Whether to get the basic table information only.
+
+        Returns:
+            Table information.
+        """
         sql = SQL_TABLE_INFO_SIMPLIFIED if simple else SQL_TABLE_INFO
         return self.run_template(sql, as_df)
 
-    def get_load_error(self, as_df=True):
+    def get_load_error(self, as_df: bool = True):
+        """Utility to get load errors in the cluster.
+
+        Args:
+            as_df (optional): Whether or not to return the result as a `pandas.DataFrame`.
+
+        Returns:
+            Load error information.
+        """
         return self.run_template(SQL_LOAD_ERRORS, as_df)
 
-    def get_running_info(self, as_df=True):
+    def get_running_info(self, as_df: bool = True):
+        """Utility to get information on running queries in the cluster.
+
+        Args:
+            as_df (optional): Whether or not to return the result as a `pandas.DataFrame`.
+
+        Returns:
+            Running query information.
+        """
         return self.run_template(SQL_RUNNING_INFO, as_df)
 
-    def get_lock_info(self, as_df=True):
+    def get_lock_info(self, as_df: bool = True):
+        """Utility to get lock information in the cluster.
+
+        Args:
+            as_df (optional): Whether or not to return the result as a `pandas.DataFrame`.
+
+        Returns:
+            Lock information.
+        """
         return self.run_template(SQL_LOCK_INFO, as_df)
 
-    def get_transaction_info(self, as_df=True):
+    def get_transaction_info(self, as_df: bool = True):
+        """Utility to get transaction information in the cluster.
+
+        Args:
+            as_df (optional): Whether or not to return the result as a `pandas.DataFrame`.
+
+        Returns:
+            Transaction information.
+        """
         return self.run_template(SQL_TRANSACT_INFO, as_df)
 
-    def redshift_to_df(self, sql):
-        """Redshift results to Pandas DataFrame
+    def redshift_to_df(self, sql: str):
+        """Redshift query result to a Pandas DataFrame.
 
-        # Arguments
-            sql: str, SQL query
+        Args:
+            sql: SQL query.
 
-        # Returns
-            DataFrame of query result
+        Returns:
+            pandas.DataFrame: A DataFrame of query result.
         """
         data, columns = self.run_query(sql, fetch=True)
         data = pd.DataFrame(data, columns=columns)
         return data
 
-    def redshift_to_file(self, sql, filename, **kwargs):
-        """Redshift results to Pandas DataFrame
+    def redshift_to_file(self, sql: str, filename: str, **kwargs):
+        """Redshift query result to a file.
 
-        # Arguments
-            sql: str, SQL query
-            filename: str, file name to save as
-        # Returns
-            None
+        Args:
+            sql: SQL query.
+            filename: File name of the saved file.
+            **kwargs: `to_csv` keyword arguments.
         """
         data = self.redshift_to_df(sql)
         to_csv_kwargs = filter_kwargs(kwargs, PANDAS_TOCSV_KWARGS)
@@ -222,58 +314,64 @@ class RedshiftUtils:
 
     def create_table(
         self,
-        table_name,
-        column_definition,
-        temp=False,
-        if_not_exists=False,
-        backup="YES",
-        unique=None,
-        primary_key=None,
-        foreign_key=None,
-        references=None,
-        diststyle="EVEN",
-        distkey=None,
-        sortstyle="COMPOUND",
-        sortkey=None,
-        drop_first=False,
+        table_name: str,
+        column_definition: dict,
+        temp: bool = False,
+        if_not_exists: bool = False,
+        backup: str = "YES",
+        unique: List[str] = None,
+        primary_key: str = None,
+        foreign_key: List[str] = None,
+        references: List[str] = None,
+        diststyle: str = "EVEN",
+        distkey: str = None,
+        sortstyle: str = "COMPOUND",
+        sortkey: List[str] = None,
+        drop_first: bool = False,
     ):
-        """Utility for creating table in Redshift
+        """Utility for creating a table in Redshift.
 
-        # Arguments
-            column_definition: dict, default:
-            {
-                'col1': {
-                    'data_type': 'varchar(256)', # str
-                    'default': None, # Any
-                    'identity': None, # tuple(int, int)
-                    'encode': None, # str
-                    'distkey': False,
-                    'sortkey': False,
-                    'nullable': True,
-                    'unique': False,
-                    'primary_key': False,
-                    'foreign_key': False,
-                    'references': None, # str
-                    'like': None, # str
-                },
-                'col2': {
+        Args:
+            table_name: Name of table to be created.
+            column_definition: default::
+
+                {
+                    "col1": {
+                        "data_type": "varchar(256)", # str
+                        "default": None, # Any
+                        "identity": None, # tuple(int, int)
+                        "encode": None, # str
+                        "distkey": False,
+                        "sortkey": False,
+                        "nullable": True,
+                        "unique": False,
+                        "primary_key": False,
+                        "foreign_key": False,
+                        "references": None, # str
+                        "like": None, # str
+                    },
+                    "col2": {
+                        ...
+                    },
                     ...
-                },
-                ...
-            }
+                }
+            temp (optional): Corresponding argument of `create table` in Redshift.  
+            if_not_exists (optional): Corresponding argument of `create table` in Redshift.  
+            backup (optional): Corresponding argument of `create table` in Redshift.  
+            unique (optional): Corresponding argument of `create table` in Redshift.  
+            primary_key (optional): Corresponding argument of `create table` in Redshift.  
+            foreign_key (optional): Corresponding argument of `create table` in Redshift.  
+                Must match references.
+            references (optional): Corresponding argument of `create table` in Redshift.  
+                Must match foreign_key.
+            diststyle (optional): Corresponding argument of `create table` in Redshift.  
+            distkey (optional): Corresponding argument of `create table` in Redshift.  
+            sortstyle (optional): Corresponding argument of `create table` in Redshift.  
+            sortkey (optional): Corresponding argument of `create table` in Redshift.  
+            drop_first (optional): Corresponding argument of `create table` in Redshift.  
 
-            unique: list[str]
-
-            primary_key: str
-
-            foreign_key: list[str], must match references.
-
-            references: list[str], must match foreign_key.
-
-            sortkey: list[str]
-
-        # TODO:
-            - Check consistency between column_constraints and table_constraints
+        TODO:
+            * Check consistency between column_constraints and table_constraints
         """
         if drop_first:
             self.run_query(f"drop table if exists {table_name}")

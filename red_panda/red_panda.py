@@ -68,7 +68,6 @@ class RedPanda(RedshiftUtils, S3Utils):
         redshift_conf (dict): Redshift configuration.
         aws_conf (dict): AWS configuration.
         default_bucket (str): Default bucket to store files.
-        dryrun (bool): If True, queries will be printed instead of executed.
     """
 
     def __init__(
