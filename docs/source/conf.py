@@ -18,14 +18,14 @@ import sys
 sys.path.insert(0, os.path.abspath("../.."))
 
 from red_panda import __version__
-from recommonmark.parser import CommonMarkParser
+# from recommonmark.parser import CommonMarkParser
 
 # -- Extra for ReadTheDoc -----------------------------------------------------
-source_parsers = {
-    ".md": CommonMarkParser,
-}
+# source_parsers = {
+#     ".md": CommonMarkParser,
+# }
 
-source_suffix = [".rst", ".md"]
+# source_suffix = [".rst", ".md"]
 
 # -- Project information -----------------------------------------------------
 
