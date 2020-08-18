@@ -5,9 +5,9 @@ Welcome to Red Panda's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-<!-- .. include:: ../../README.md -->
+.. mdinclude:: ../../README.md
 
-Indices and tables
+API
 ==================
 
 * :ref:`genindex`

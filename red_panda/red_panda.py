@@ -16,14 +16,14 @@ from red_panda.aws.redshift import RedshiftUtils
 LOGGER = logging.getLogger(__name__)
 
 
-def map_types(columns_types):
-    """Convert Pandas dtypes to Redshift data types
+def map_types(columns_types: dict):
+    """Convert Pandas dtypes to Redshift data types.
 
-    # Arguments
-        cols_types: dict, return value of dict(df.dtypes)
+    Args:
+        cols_types: The return value of `dict(df.dtypes)`, where `df` is a Pandas Dataframe.
 
-    # Returns
-        A dict of {original column name: mapped redshift data type}
+    Returns:
+        dict: A `dict` of `{original column name: mapped redshift data type}`
     """
     PANDAS_REDSHIFT_TYPES_MAP = {
         "O": "varchar(256)",
@@ -40,14 +40,14 @@ def map_types(columns_types):
     }
 
 
-def check_invalid_columns(columns):
-    """Check column names against Redshift reserved words
+def check_invalid_columns(columns: list):
+    """Check column names against Redshift reserved words.
 
-    # Arguments
-        columns: list, list of column names to check
+    Args:
+        columns: A list of column names to check.
 
-    # Raises
-        `ValueError`
+    Raises:
+        ValueError: If the column name is invalid.
     """
     invalid_df_col_names = []
     invalid_df_col_names = [c for c in columns if c in REDSHIFT_RESERVED_WORDS]
@@ -56,22 +56,19 @@ def check_invalid_columns(columns):
 
 
 class RedPanda(RedshiftUtils, S3Utils):
-    """Class for operations between Pandas and Redshift/S3
+    """Class for operations between Pandas and Redshift/S3.
 
-    Solves interoperability between Pandas and Redshift through csv ingestion via S3.
-
-    # Arguments
-        redshift_conf: dict, Redshift configuration.
-
-        s3_conf: dict, S3 configuration.
-
-        dryrun: bool, if True, queries will be printed instead of executed.
-
-    # References
-        - https://docs.aws.amazon.com/redshift/latest/dg/r_COPY.html for COPY
-        - https://docs.aws.amazon.com/redshift/latest/dg/r_UNLOAD.html for UNLOAD
-        - https://github.com/getredash/redash for handling connections
-        - https://github.com/agawronski/pandas_redshift for inspiration
+    Args:
+        redshift_conf (dict): Redshift configuration.
+        aws_conf (dict, optional): AWS configuration.
+        default_bucket (str, optional): Default bucket to store files.
+        dryrun (bool, optional): If True, queries will be printed instead of executed.
+    
+    Attributes:
+        redshift_conf (dict): Redshift configuration.
+        aws_conf (dict): AWS configuration.
+        default_bucket (str): Default bucket to store files.
+        dryrun (bool): If True, queries will be printed instead of executed.
     """
 
     def __init__(
@@ -111,40 +108,26 @@ class RedPanda(RedshiftUtils, S3Utils):
         region=None,
         iam_role=None,
     ):
-        """Load S3 file into Redshift
+        """Load S3 file into Redshift.
 
-        # Arguments
-            bucket: str, S3 bucket name.
-
-            key: str, S3 key.
-
-            table_name: str, Redshift table name (optional include schema name).
-
-            column_definition: dict, (optional) specify the column definition if for CREATE TABLE.
-
-            append: bool, if True, df will be appended to Redshift table, otherwise table will be
-            dropped and recreated.
-
-            delimiter: str, delimiter of file. Default is ",".
-
-            ignoreheader: int, number of header lines to skip when COPY.
-
-            quote_character: str, QUOTE_CHARACTER for COPY. Only used when delimiter is ",".
-            Default to '"'.
-
-            dateformat: str, TIMEFORMAT argument for COPY. Default is "auto". 
-
-            timeformat: str, TIMEFORMAT argument for COPY. Default is "auto".
-
-            acceptinvchars: bool, whether to include the ACCEPTINVCHAR argument in COPY.
-
-            escape: bool, whether to include the ESCAPE argument in COPY.
-
-            null: str, specify the NULL AS string.
-
-            region: str, S3 region.
-
-            iam_role: str, use IAM Role for access control. This feature is untested.
+        Args:
+            bucket (str): S3 bucket name.
+            key (str): S3 key.
+            table_name (str): Redshift table name (optional include schema name).
+            column_definition (dict, optional): Specify the column definition if for CREATE TABLE.
+            append (bool, optional): Ff True, df will be appended to Redshift table, otherwise table 
+                will be dropped and recreated.
+            delimiter (str, optional): Delimiter of file. Default is ",".
+            ignoreheader (int, optional): number of header lines to skip when COPY.
+            quote_character (str, optional): QUOTE_CHARACTER for COPY. Only used when delimiter is 
+                ",". Default to '"'.
+            dateformat (str, optional): TIMEFORMAT argument for COPY. Default is "auto". 
+            timeformat (str, optional): TIMEFORMAT argument for COPY. Default is "auto".
+            acceptinvchars (bool, optional): Whether to include the ACCEPTINVCHAR argument in COPY.
+            escape (bool, optional): Whether to include the ESCAPE argument in COPY.
+            null (str, optional): Specify the NULL AS string.
+            region (str, optional): S3 region.
+            iam_role (str, optional): Use IAM Role for access control. This feature is untested.
         """
         if not append:
             if column_definition is None:
@@ -245,29 +228,20 @@ class RedPanda(RedshiftUtils, S3Utils):
         cleanup=True,
         **kwargs,
     ):
-        """Pandas DataFrame to Redshift table
+        """Pandas DataFrame to Redshift table.
 
-        # Arguments
-            df: pandas.DataFrame, source dataframe.
-
-            table_name: str, Redshift table name (optional include schema name).
-
-            bucket: str, S3 bucket name.
-
-            column_definition: dict, (optional) specify the column definition if for CREATE TABLE.
-            If not given and append is False, data type will be inferred.
-
-            append: bool, if true, df will be appended to Redshift table, otherwise table will be
-            dropped and recreated.
-
-            path: str, S3 key excluding file name.
-
-            file_name: str, if `fname` is None, filename will be randomly generated.
-
-            cleanup: bool, default true, S3 file will be deleted after COPY.
-
-            kwargs: keyword arguments to pass to Pandas `to_csv` and Redshift COPY. See 
-            red_panda.constants for all implemented arguments.
+        Args:
+            df (pandas.DataFrame): Source dataframe.
+            table_name (str): Redshift table name (optionally include schema name).
+            bucket (str, optional): S3 bucket name, fallback to `default_bucket` if not present.
+            column_definition (dict, optional): Specify the column definition for CREATE TABLE. If 
+                not given and append is False, data type will be inferred.
+            append (bool, optional): If true, df will be appended to Redshift table, otherwise table 
+                will be dropped and recreated.
+            path (str, optional): S3 key excluding file name.
+            file_name (str, optional): If None, filename will be randomly generated.
+            cleanup: (bool, optional): Default True, S3 file will be deleted after COPY.
+            **kwargs: keyword arguments to pass to Pandas `to_csv` and Redshift COPY.
         """
         bridge_bucket = bucket or self.default_bucket
         if not bridge_bucket:
@@ -331,45 +305,31 @@ class RedPanda(RedshiftUtils, S3Utils):
         parallel="ON",
         maxfilesize=None,
     ):
-        """Run sql and unload result to S3
+        """Run sql and unload result to S3.
 
-        # Arguments
-            sql: str, SQL query
-
-            bucket: str, S3 bucket name.
-
-            key: str, S3 key. Create if does not exist.
-
-            prefix: str, prefix of the set of files.
-
-            iam_role: str, IAM Role string. If provided, this will be used as authorization instead
-            of access_key_id/secret_access_key. This feature is untested.
-
-            manifest: bool, whether or not to create the manifest file.
-
-            delimiter: str, delimiter charater if the output file is delimited.
-
-            fixedwidth: str, if not None, it will overwrite delimiter and use fixedwidth format
-            instead.
-
-            encrypted: bool, whether or not the files should be encrypted.
-
-            bzip2: bool, whether or not the files should be compressed with bzip2.
-
-            gzip: bool, whether or not the files should be compressed with gzip.
-
-            addquotes: bool, whether or not values with delimiter characters should be quoted.
-
-            null: str, specify the NULL AS string.
-
-            escape: bool, whether to include the ESCAPE argument in UNLOAD.
-
-            allowoverwrite: bool, whether or not existing files should be overwritten. Redshift will
-            fail with error message if this is False and there are existing files.
-
-            parallel: str, ON or OFF. Whether or not to use parallel and unload into multiple files.
-
-            maxfilesize: str, maxfilesize argument for UNLOAD.
+        Args:
+            sql (str): SQL query.
+            bucket (str): S3 bucket name.
+            key (str, optional): S3 key. Create if does not exist.
+            prefix (str, optional): Prefix of the set of files.
+            iam_role (str, optional): IAM Role string. If provided, this will be used as 
+                authorization instead of access_key_id/secret_access_key. This feature is untested.
+            manifest (bool, optional): Whether or not to create the manifest file.
+            delimiter (str, optional): Delimiter charater if the output file is delimited.
+            fixedwidth (str, optional): If not None, it will overwrite delimiter and use fixedwidth 
+                format instead.
+            encrypted (bool, optional): Whether or not the files should be encrypted.
+            bzip2 (bool, optional): Whether or not the files should be compressed with bzip2.
+            gzip (bool, optional): Whether or not the files should be compressed with gzip.
+            addquotes (bool, optional): Whether or not values with delimiter characters should be 
+                quoted.
+            null (str, optional): Specify the NULL AS string.
+            escape (bool, optional): Whether to include the ESCAPE argument in UNLOAD.
+            allowoverwrite (bool, optional): Whether or not existing files should be overwritten. 
+                Redshift will fail with error message if this is False and there are existing files.
+            parallel (str, optional): ON or OFF. Whether or not to use parallel and unload into 
+                multiple files.
+            maxfilesize (str, optional): Maxfilesize argument for UNLOAD.
         """
         destination_option = ""
         if path is not None:
