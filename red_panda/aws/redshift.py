@@ -1,8 +1,10 @@
 import logging
 from typing import Union, List
+
 import pandas as pd
 import psycopg2
 
+from red_panda.typing import QueryResult, TemplateQueryResult
 from red_panda.pandas import PANDAS_TOCSV_KWARGS
 from red_panda.aws.templates.redshift import (
     SQL_NUM_SLICES,
@@ -19,7 +21,7 @@ from red_panda.utils import filter_kwargs, prettify_sql
 LOGGER = logging.getLogger(__name__)
 
 
-def create_column_definition_single(d: dict):
+def create_column_definition_single(d: dict) -> str:
     """Create the column definition for a single column.
 
     Args:
@@ -90,7 +92,7 @@ def create_column_definition_single(d: dict):
     return " ".join(template.split())
 
 
-def create_column_definition(d: dict):
+def create_column_definition(d: dict) -> str:
     """Create full column definition string for Redshift.
 
     Args:
@@ -127,20 +129,20 @@ class RedshiftUtils:
         )
         return connection
 
-    def run_sql_from_file(self, filename: str):
+    def run_sql_from_file(self, file_name: str):
         """Run a `.sql` file.
 
         Args:
-            filename: SQL file to be run.
+            file_name: SQL file to be run.
 
         TODO:
             * Add support for transactions.
         """
-        with open(filename, "r") as f:
+        with open(file_name, "r") as f:
             sql = f.read()
         self.run_query(sql)
 
-    def run_query(self, sql: str, fetch: bool = False):
+    def run_query(self, sql: str, fetch: bool = False) -> QueryResult:
         """Run a SQL query.
 
         Args:
@@ -196,7 +198,7 @@ class RedshiftUtils:
         """
         self.run_query(f"select pg_terminate_backend({pid})")
 
-    def get_num_slices(self):
+    def get_num_slices(self) -> Union[int, None]:
         """Get number of slices of a Redshift cluster.
         
         Returns:
@@ -213,7 +215,7 @@ class RedshiftUtils:
             LOGGER.error("Could not derive number of slices of Redshift cluster.")
         return n_slices
 
-    def run_template(self, sql: str, as_df: bool = True):
+    def run_template(self, sql: str, as_df: bool = True) -> TemplateQueryResult:
         """Utility method to run a pre-defined sql template.
 
         Args:
@@ -230,7 +232,9 @@ class RedshiftUtils:
         else:
             return (data, columns)
 
-    def get_table_info(self, as_df: bool = True, simple: bool = False):
+    def get_table_info(
+        self, as_df: bool = True, simple: bool = False
+    ) -> TemplateQueryResult:
         """Utility to get table information in the cluster.
 
         Args:
@@ -243,7 +247,7 @@ class RedshiftUtils:
         sql = SQL_TABLE_INFO_SIMPLIFIED if simple else SQL_TABLE_INFO
         return self.run_template(sql, as_df)
 
-    def get_load_error(self, as_df: bool = True):
+    def get_load_error(self, as_df: bool = True) -> TemplateQueryResult:
         """Utility to get load errors in the cluster.
 
         Args:
@@ -254,7 +258,7 @@ class RedshiftUtils:
         """
         return self.run_template(SQL_LOAD_ERRORS, as_df)
 
-    def get_running_info(self, as_df: bool = True):
+    def get_running_info(self, as_df: bool = True) -> TemplateQueryResult:
         """Utility to get information on running queries in the cluster.
 
         Args:
@@ -265,7 +269,7 @@ class RedshiftUtils:
         """
         return self.run_template(SQL_RUNNING_INFO, as_df)
 
-    def get_lock_info(self, as_df: bool = True):
+    def get_lock_info(self, as_df: bool = True) -> TemplateQueryResult:
         """Utility to get lock information in the cluster.
 
         Args:
@@ -276,7 +280,7 @@ class RedshiftUtils:
         """
         return self.run_template(SQL_LOCK_INFO, as_df)
 
-    def get_transaction_info(self, as_df: bool = True):
+    def get_transaction_info(self, as_df: bool = True) -> TemplateQueryResult:
         """Utility to get transaction information in the cluster.
 
         Args:
@@ -287,7 +291,7 @@ class RedshiftUtils:
         """
         return self.run_template(SQL_TRANSACT_INFO, as_df)
 
-    def redshift_to_df(self, sql: str):
+    def redshift_to_df(self, sql: str) -> pd.DataFrame:
         """Redshift query result to a Pandas DataFrame.
 
         Args:
@@ -297,20 +301,19 @@ class RedshiftUtils:
             pandas.DataFrame: A DataFrame of query result.
         """
         data, columns = self.run_query(sql, fetch=True)
-        data = pd.DataFrame(data, columns=columns)
-        return data
+        return pd.DataFrame(data, columns=columns)
 
-    def redshift_to_file(self, sql: str, filename: str, **kwargs):
+    def redshift_to_file(self, sql: str, file_name: str, **kwargs):
         """Redshift query result to a file.
 
         Args:
             sql: SQL query.
-            filename: File name of the saved file.
+            file_name: File name of the saved file.
             **kwargs: `to_csv` keyword arguments.
         """
         data = self.redshift_to_df(sql)
         to_csv_kwargs = filter_kwargs(kwargs, PANDAS_TOCSV_KWARGS)
-        data.to_csv(filename, **to_csv_kwargs)
+        data.to_csv(file_name, **to_csv_kwargs)
 
     def create_table(
         self,

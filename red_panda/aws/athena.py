@@ -1,20 +1,24 @@
 from pyathena import connect
 from pyathena.util import as_pandas
 
+from red_panda.typing import AthenaQueryResult
 from red_panda.aws import AWSUtils
 
+
 class AthenaUtils(AWSUtils):
-    """AWS Athena operations
+    """AWS Athena operations.
 
-    # Arguments:
-        s3_staging_dir: str, full S3 folder uri, i.e. s3://athena-query/results
+    Args:
+        aws_config: AWS configuration.
+        s3_staging_dir: Full S3 folder uri, i.e. s3://athena-query/results.
+        region_name: AWS region name.
 
-    # TODO: 
-        - Complete Support for other cursor types.
-        - Full parameters on `connect`
+    TODO:
+        * Complete Support for other cursor types.
+        * Full parameters on `connect`.
     """
 
-    def __init__(self, aws_config, s3_staging_dir, region_name):
+    def __init__(self, aws_config: dict, s3_staging_dir: dict, region_name: str):
         super().__init__(aws_config=aws_config)
         self.cursor = connect(
             aws_access_key_id=self.aws_config.get("aws_access_key_id"),
@@ -23,7 +27,16 @@ class AthenaUtils(AWSUtils):
             region_name=region_name,
         ).cursor()
 
-    def run_sql(self, sql, as_df=False):
+    def run_query(self, sql: str, as_df: bool = False) -> AthenaQueryResult:
+        """Run query on Athena.
+
+        Args:
+            sql: SQL query.
+            as_df (optional): Whether to return the result as DataFrame.
+
+        Returns:
+
+        """
         self.cursor.execute(sql)
         if as_df:
             return as_pandas(self.cursor)

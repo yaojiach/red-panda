@@ -1,6 +1,3 @@
-Welcome to Red Panda's documentation!
-=====================================
-
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
@@ -10,5 +7,5 @@ Welcome to Red Panda's documentation!
 API
 ==================
 
-* :ref:`genindex`
 * :ref:`modindex`
+* :ref:`genindex`

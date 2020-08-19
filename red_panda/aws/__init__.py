@@ -1,5 +1,6 @@
 import os
 from awscli.clidriver import create_clidriver
+import pandas as pd
 
 REDSHIFT_RESERVED_WORDS = [
     "aes128",
@@ -254,7 +255,7 @@ S3_CREATE_BUCKET_KWARGS = [
 ]
 
 
-def set_aws_env_from_config(env, config):
+def _set_aws_env_from_config(env: dict, config: dict) -> dict:
     if config.get("aws_access_key_id") is not None:
         env["AWS_ACCESS_KEY_ID"] = config.get("aws_access_key_id")
     if config.get("aws_secret_access_key") is not None:
@@ -270,20 +271,22 @@ def set_aws_env_from_config(env, config):
     return env
 
 
-def run_awscli(*cmd, config=None):
-    """Work around to run awscli commands for features not included in boto3
+def run_awscli(*cmd, config: dict = None):
+    """Work around to run `awscli` commands for features not implemented in boto3.
     
-    # Example
-        ```python
-        run_awscli('s3', 'sync', 's3://bucket/source', 's3://bucket/destination', '--delete')
-        ````
+    Args:
+        *cmd: Commands that are normally passed to awscli.
+        config (optional): Config to override default awscli config.
+
+    Example:
+        >>> run_awscli('s3', 'sync', 's3://bucket/source', 's3://bucket/destination', '--delete')
     """
     old_env = os.environ.copy()
     try:
         env = os.environ.copy()
         env["LC_CTYPE"] = "en_US.UTF"
         if config is not None:
-            env = set_aws_env_from_config(env, config)
+            env = _set_aws_env_from_config(env, config)
         os.environ.update(env)
         exit_code = create_clidriver().main([*cmd])
         if exit_code > 0:
@@ -294,9 +297,16 @@ def run_awscli(*cmd, config=None):
 
 
 class AWSUtils:
-    """ Base class for AWS operations"""
+    """ Base class for AWS operations.
+    
+    Args:
+        aws_config: AWS configuration.
 
-    def __init__(self, aws_config):
+    Attributes:
+        aws_config (dict): AWS configuration.
+    """
+
+    def __init__(self, aws_config: dict):
         if aws_config is None:
             aws_config = {
                 "aws_access_key_id": None,
