@@ -22,7 +22,7 @@ def row_number(
     sort_by: List[str],
     col_name: str = "row_number",
     ascending: bool = True,
-    as_series: bool = False,
+    as_series: bool = True,
 ) -> Union[pd.DataFrame, pd.Series]:
     """Create a row number series given a DataFrame lists of columns for group by and sort by.
     
@@ -38,22 +38,21 @@ def row_number(
         A DataFrame with row number or the row number Series.
 
     Example:
-        >>> df = row_number(df, ['group'], ['sort', 'order'])
-        >>> df['rn'] = row_number(df, ['group'], ['sort', 'order'], as_series=True)
+        >>> df = row_number(df, ['group'], ['sort'], as_series=False)
+        >>> df['rn'] = row_number(df, ['group'], ['sort'])
     """
+    s = df.sort_values(sort_by, ascending=ascending).groupby(group_by).cumcount()
     if as_series:
-        return df.sort_values(sort_by, ascending=ascending).groupby(group_by).cumcount()
+        return s
     else:
         if col_name in list(df.columns):
             raise ValueError(f"Column  {col_name} already exists.")
-        df[col_name] = (
-            df.sort_values(sort_by, ascending=ascending).groupby(group_by).cumcount()
-        )
+        df[col_name] = s
         return df
 
 
 def groupby_mutate(
-    df: pd.DataFrame, group_by: List[str], func_dict: Dict[str, Callable]
+    df: pd.DataFrame, group_by: Union[List[str], str], func_dict: Dict[str, Callable]
 ) -> pd.DataFrame:
     """Similar to R's dplyr::mutate.
 
@@ -80,7 +79,7 @@ def groupby_mutate(
 
 
 def groupby_distinct(
-    df: pd.DataFrame, group_by: List[str], distinct: Union[list, str]
+    df: pd.DataFrame, group_by: Union[List[str], str], distinct: Union[list, str]
 ) -> pd.DataFrame:
     """Unique count per group."""
     func_dict = {}
