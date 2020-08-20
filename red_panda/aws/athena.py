@@ -13,12 +13,18 @@ class AthenaUtils(AWSUtils):
         s3_staging_dir: Full S3 folder uri, i.e. s3://athena-query/results.
         region_name: AWS region name.
 
+    Attributes:
+        aws_config: AWS configuration.
+        s3_staging_dir: Full S3 folder uri, i.e. s3://athena-query/results.
+        region_name: AWS region name.
+
     TODO:
         * Complete Support for other cursor types.
         * Full parameters on `connect`.
+        * Use region from `aws_config` if not provided
     """
 
-    def __init__(self, aws_config: dict, s3_staging_dir: dict, region_name: str):
+    def __init__(self, aws_config: dict, s3_staging_dir: dict, region_name: str = None):
         super().__init__(aws_config=aws_config)
         self.cursor = connect(
             aws_access_key_id=self.aws_config.get("aws_access_key_id"),

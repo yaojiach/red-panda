@@ -12,14 +12,18 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^10.17.0",
+    "@types/uuid": "^8.3.0",
     "typescript": "~3.7.2"
   },
   "dependencies": {
-    "@aws-cdk/aws-ec2": "^1.57.0",
-    "@aws-cdk/aws-iam": "^1.57.0",
-    "@aws-cdk/aws-redshift": "^1.57.0",
-    "@aws-cdk/aws-s3": "^1.57.0",
-    "@aws-cdk/core": "^1.57.0",
-    "dotenv": "^8.2.0"
+    "@aws-cdk/aws-ec2": "^1.60.0",
+    "@aws-cdk/aws-glue": "^1.60.0",
+    "@aws-cdk/aws-iam": "^1.60.0",
+    "@aws-cdk/aws-redshift": "^1.60.0",
+    "@aws-cdk/aws-s3": "^1.60.0",
+    "@aws-cdk/aws-s3-assets": "^1.60.0",
+    "@aws-cdk/core": "^1.60.0",
+    "dotenv": "^8.2.0",
+    "uuid": "^8.3.0"
   }
 }
