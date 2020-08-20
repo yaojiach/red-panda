@@ -2,6 +2,8 @@
 
 ## CDK Testing Infrastructure
 
+CDK (TypeScript) is used to manage AWS infrastructure for integration tests.
+
 ```sh
 cd cdk
 npm run build
@@ -13,17 +15,17 @@ npm run build
 # Unit tests
 tox -e unit
 
-# Integration tests
+# Integration tests, this will also create new AWS infrastructure.
 tox -e integ
 
 # Integration tests without creating stack (use existing)
 tox -e integ -- --skip-cdk
 
 # Run a single test
-tox -e unit -- -k test_groupby_distinct
+tox -e unit -- -k test_{name}
 ```
 
-## Documentation
+## Build Documentation Locally
 
 ```sh
 cd docs
