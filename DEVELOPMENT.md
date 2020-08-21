@@ -34,6 +34,9 @@ tox -e unit
 tox -e integ -- --skip-cdk
 tox -e report
 # Running `tox` will clean existing coverage and only report unit test coverage
+
+# Use make file
+make e2e
 ```
 
 ## Build Documentation Locally
