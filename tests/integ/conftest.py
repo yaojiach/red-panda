@@ -54,7 +54,7 @@ def glue_data():
     return GLUE_DATA
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def aws(pytestconfig):
     if pytestconfig.getoption("--skip-cdk"):
         LOGGER.info("Skipping CDK Setup")

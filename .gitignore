@@ -1,6 +1,7 @@
 # Project
 .DS_Store
 .vscode/
+.cc_token
 lib/
 node_modules
 cdk.out

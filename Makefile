@@ -7,3 +7,8 @@ unit-test:
 	tox -e unit
 integ-test:
 	tox -e integ
+e2e:
+	tox -e clean
+	tox -e unit
+	tox -e integ -- --skip-cdk
+	tox -e report
