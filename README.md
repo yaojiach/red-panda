@@ -4,6 +4,7 @@
 
 [![docs](https://readthedocs.org/projects/red-panda/badge/?version=dev)](https://red-panda.readthedocs.io/en/dev/?badge=dev)
 [![codecov](https://codecov.io/gh/jucyai/red-panda/branch/dev/graph/badge.svg)](https://codecov.io/gh/jucyai/red-panda)
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/jucyao/red-panda/blob/master/LICENSE)
 
 Easily interact with cloud (AWS) in your Data Science workflow.
 
