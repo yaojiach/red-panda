@@ -1,11 +1,8 @@
 # Red Panda
 
----
-
 ![image](https://raw.githubusercontent.com/jucyai/red-panda/master/artwork/logo.jpg)
 
 [![docs](https://readthedocs.org/projects/red-panda/badge/?version=dev)](https://red-panda.readthedocs.io/en/dev/?badge=dev)
-
 [![codecov](https://codecov.io/gh/jucyai/red-panda/branch/dev/graph/badge.svg)](https://codecov.io/gh/jucyai/red-panda)
 
 Easily interact with cloud (AWS) in your Data Science workflow.
