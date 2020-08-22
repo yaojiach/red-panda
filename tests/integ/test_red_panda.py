@@ -13,7 +13,7 @@ def red_panda(redshift_config, aws_config, s3_bucket):
     return RedPanda(redshift_config, aws_config, s3_bucket)
 
 
-def test_df_to_and_from_redshift(red_panda):
+def test_df_to_and_from_redshift_with_credentials(red_panda):
     TABLE_NAME = "test_table"
     DOWNLOAD_SQL = f"select * from {TABLE_NAME}"
     DOWNLOAD_DF = pd.DataFrame(
@@ -21,7 +21,12 @@ def test_df_to_and_from_redshift(red_panda):
     )
     UPLOAD_DF = DOWNLOAD_DF[["col1", "col2"]]
     red_panda.df_to_redshift(UPLOAD_DF, TABLE_NAME, append=False)
-    assert all(red_panda.redshift_to_df(DOWNLOAD_SQL) == DOWNLOAD_DF)
+    queried = (
+        red_panda.redshift_to_df(DOWNLOAD_SQL)
+        .sort_values("col1")
+        .reset_index(drop=True)
+    )
+    assert queried.equals(DOWNLOAD_DF)
 
 
 def test_df_to_and_from_redshift_with_iam(red_panda, iam_role_arn):
@@ -32,4 +37,9 @@ def test_df_to_and_from_redshift_with_iam(red_panda, iam_role_arn):
     )
     UPLOAD_DF = DOWNLOAD_DF[["col1", "col2"]]
     red_panda.df_to_redshift(UPLOAD_DF, TABLE_NAME, append=False, iam_role=iam_role_arn)
-    assert all(red_panda.redshift_to_df(DOWNLOAD_SQL) == DOWNLOAD_DF)
+    queried = (
+        red_panda.redshift_to_df(DOWNLOAD_SQL)
+        .sort_values("col1")
+        .reset_index(drop=True)
+    )
+    assert queried.equals(DOWNLOAD_DF)

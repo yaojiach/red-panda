@@ -4,6 +4,11 @@ from pyathena.util import as_pandas
 from red_panda.typing import AthenaQueryResult
 from red_panda.aws import AWSUtils
 
+import logging
+
+
+LOGGER = logging.getLogger(__name__)
+
 
 class AthenaUtils(AWSUtils):
     """AWS Athena operations.
@@ -50,6 +55,7 @@ class AthenaUtils(AWSUtils):
         res = []
         desc = self.cursor.description
         for row in self.cursor:
+            LOGGER.info(f"{row}")
             r = {}
             for i, c in enumerate(desc):
                 r[c[0]] = row[i]

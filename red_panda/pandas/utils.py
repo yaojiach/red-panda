@@ -23,7 +23,7 @@ def row_number(
     col_name: str = "row_number",
     ascending: bool = True,
     as_series: bool = True,
-) -> Union[pd.DataFrame, pd.Series]:
+) -> pd.Series:
     """Create a row number series given a DataFrame lists of columns for group by and sort by.
     
     Args:
@@ -41,14 +41,7 @@ def row_number(
         >>> df = row_number(df, ['group'], ['sort'], as_series=False)
         >>> df['rn'] = row_number(df, ['group'], ['sort'])
     """
-    s = df.sort_values(sort_by, ascending=ascending).groupby(group_by).cumcount()
-    if as_series:
-        return s
-    else:
-        if col_name in list(df.columns):
-            raise ValueError(f"Column  {col_name} already exists.")
-        df[col_name] = s
-        return df
+    return df.sort_values(sort_by, ascending=ascending).groupby(group_by).cumcount()
 
 
 def groupby_mutate(

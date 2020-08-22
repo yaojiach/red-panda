@@ -43,7 +43,7 @@ def prepare_glue_date():
     from io import StringIO
 
     buffer = StringIO()
-    GLUE_DATA.to_csv(buffer, header=False)
+    GLUE_DATA.to_csv(buffer, header=False, index=False)
     boto3.resource("s3").Object(get_s3_bucket(GLUE_BUCKET_ID), "sample.csv").put(
         Body=buffer.getvalue()
     )
