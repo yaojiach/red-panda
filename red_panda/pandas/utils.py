@@ -17,12 +17,7 @@ def merge_dfs(dfs: List[pd.DataFrame], **kwargs) -> pd.DataFrame:
 
 
 def row_number(
-    df: pd.DataFrame,
-    group_by: List[str],
-    sort_by: List[str],
-    col_name: str = "row_number",
-    ascending: bool = True,
-    as_series: bool = True,
+    df: pd.DataFrame, group_by: List[str], sort_by: List[str], ascending: bool = True,
 ) -> pd.Series:
     """Create a row number series given a DataFrame lists of columns for group by and sort by.
     
@@ -72,13 +67,9 @@ def groupby_mutate(
 
 
 def groupby_distinct(
-    df: pd.DataFrame, group_by: Union[List[str], str], distinct: Union[list, str]
+    df: pd.DataFrame, group_by: Union[List[str], str], distinct: str
 ) -> pd.DataFrame:
     """Unique count per group."""
     func_dict = {}
-    if isinstance(distinct, list):
-        for d in distinct:
-            func_dict[d] = lambda x: x[d].nunique()
-    else:
-        func_dict[distinct] = lambda x: x[distinct].nunique()
+    func_dict[distinct] = lambda x: x[distinct].nunique()
     return groupby_mutate(df, group_by, func_dict)
