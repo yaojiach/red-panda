@@ -120,14 +120,13 @@ class RedshiftUtils:
         self._dryrun = dryrun
 
     def _connect_redshift(self):
-        connection = psycopg2.connect(
+        return psycopg2.connect(
             user=self.redshift_config.get("user"),
             password=self.redshift_config.get("password"),
             host=self.redshift_config.get("host"),
             port=self.redshift_config.get("port"),
             dbname=self.redshift_config.get("dbname"),
         )
-        return connection
 
     def run_sql_from_file(self, file_name: str):
         """Run a `.sql` file.
