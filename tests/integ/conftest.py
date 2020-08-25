@@ -121,6 +121,15 @@ def get_s3_bucket(id):
 
 
 @pytest.fixture(scope="module")
+def s3_client():
+    return boto3.client(
+        "s3",
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    )
+
+
+@pytest.fixture(scope="module")
 def aws_region():
     return DEFAULT_REGION
 

@@ -1,7 +1,7 @@
 import warnings
 from collections import OrderedDict
 from textwrap import dedent
-from typing import Union
+from typing import Union, Optional
 import logging
 
 import pandas as pd
@@ -317,7 +317,7 @@ class RedPanda(RedshiftUtils, S3Utils):
     def redshift_to_s3(
         self,
         sql: str,
-        bucket: str,
+        bucket: str = None,
         path: str = None,
         prefix: str = None,
         iam_role: str = None,
@@ -366,13 +366,18 @@ class RedPanda(RedshiftUtils, S3Utils):
                 destination_option = destination_option + "/"
         if prefix is not None:
             destination_option = make_valid_uri(destination_option, f"{prefix}")
-        existing_keys = self._get_s3_pattern_existence(bucket, destination_option)
-        warn_message = f"""\
-        These keys already exist. It may cause data consistency issues.
-        {existing_keys}
-        """
-        warnings.warn(dedent(warn_message))
-        destination_option = make_valid_uri(f"s3://{bucket}", destination_option)
+        dest_bucket: Optional[str] = bucket or self.default_bucket
+        if dest_bucket is None:
+            raise ValueError("bucket cannot be None.")
+        existing_keys = self._get_s3_pattern_existence(dest_bucket, destination_option)
+        if existing_keys:
+            warn_message = f"""\
+            These keys already exist. It may cause data consistency issues.
+            {existing_keys}
+            """
+            warnings.warn(dedent(warn_message))
+        LOGGER.info(f">>>>>> {destination_option}")
+        destination_option = make_valid_uri(f"s3://{dest_bucket}", destination_option)
         if bzip2 and gzip:
             raise ValueError("Only one of [bzip2, gzip] should be True")
         manifest_option = "manifest" if manifest else ""
