@@ -232,16 +232,23 @@ class S3Utils(AWSUtils):
         buffer = self.s3_to_obj(bucket, key, **s3_get_kwargs)
         return pd.read_csv(buffer, **read_table_kwargs)
 
-    def s3_folder_to_df(self, bucket, folder, prefix=None, **kwargs):
+    def s3_folder_to_df(self, bucket: str, folder: str, prefix: str = None, **kwargs):
+        """Read all files in folder with prefix to a df.
+
+        Args:
+            bucket: S3 bucket name.
+            folder: S3 folder.
+            prefix: File prefix.
+
+        Returns:
+            A DataFrame.
+        """
         s3_get_kwargs = filter_kwargs(kwargs, S3_GET_KWARGS)
         read_table_kwargs = filter_kwargs(kwargs, PANDAS_READ_TABLE_KWARGS)
         if folder[-1] != "/":
             folder = folder + "/"
-        if prefix is None:
-            prefix = "/"
-        pattern = make_valid_uri(folder, prefix)
-        allfiles = self.list_object_keys(bucket, pattern)
-        allfiles = [f for f in allfiles if f != folder]
+        pattern = make_valid_uri(folder, prefix or "/")
+        allfiles = [f for f in self.list_object_keys(bucket, pattern) if f != folder]
         dfs = []
         for f in allfiles:
             LOGGER.info(f"Reading file {f}")

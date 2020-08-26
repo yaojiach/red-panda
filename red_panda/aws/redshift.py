@@ -1,5 +1,5 @@
 import logging
-from typing import Union, List
+from typing import Union, Optional, List
 
 import pandas as pd
 import psycopg2
@@ -197,7 +197,7 @@ class RedshiftUtils:
         """
         self.run_query(f"select pg_terminate_backend({pid})")
 
-    def get_num_slices(self) -> Union[int, None]:
+    def get_num_slices(self) -> Optional[int]:
         """Get number of slices of a Redshift cluster.
         
         Returns:

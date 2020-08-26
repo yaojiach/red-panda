@@ -20,6 +20,11 @@ S3_KEY = "sample.csv"
 SAMPLE_BODY = "col0\n1"
 SAMPLE_BODY_BYTES = b"col0\n1"
 SAMPLE_DF = pd.DataFrame([{"col0": 1}])
+S3_FOLDER = "sample-folder"
+S3_FOLDER_FILE_PREFIX = "prefix"
+S3_FOLDER_FILE_0 = f"{S3_FOLDER}/{S3_FOLDER_FILE_PREFIX}-0.csv"
+S3_FOLDER_FILE_1 = f"{S3_FOLDER}/{S3_FOLDER_FILE_PREFIX}-1.csv"
+SAMPLE_FOLDER_DF = pd.DataFrame([{"col0": 1}, {"col0": 1}])
 
 
 def get_bucket_names():
@@ -33,6 +38,8 @@ def s3_utils():
         s3 = boto3.client("s3")
         s3.create_bucket(Bucket=S3_BUCKET_NAME)
         s3.put_object(Bucket=S3_BUCKET_NAME, Key=S3_KEY, Body=b"col0\n1")
+        s3.put_object(Bucket=S3_BUCKET_NAME, Key=S3_FOLDER_FILE_0, Body=b"col0\n1")
+        s3.put_object(Bucket=S3_BUCKET_NAME, Key=S3_FOLDER_FILE_1, Body=b"col0\n1")
         yield S3Utils(MOCK_AWS_CONFIG)
     LOGGER.info(f">>>>> Teardown mock S3")
 
@@ -79,4 +86,11 @@ def test_s3_to_file(s3_utils, tmpdir):
 def test_s3_to_df(s3_utils):
     df = s3_utils.s3_to_df(bucket=S3_BUCKET_NAME, key=S3_KEY)
     assert df.equals(SAMPLE_DF)
+
+
+def test_s3_folder_to_df(s3_utils):
+    df = s3_utils.s3_folder_to_df(
+        bucket=S3_BUCKET_NAME, folder=S3_FOLDER, prefix=S3_FOLDER_FILE_PREFIX
+    ).reset_index(drop=True)
+    assert df.equals(SAMPLE_FOLDER_DF)
 

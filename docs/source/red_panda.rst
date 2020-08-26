@@ -22,6 +22,14 @@ red\_panda.red\_panda module
    :undoc-members:
    :show-inheritance:
 
+red\_panda.typing module
+------------------------
+
+.. automodule:: red_panda.typing
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
