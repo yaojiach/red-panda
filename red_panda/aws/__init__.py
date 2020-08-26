@@ -1,7 +1,3 @@
-import os
-from awscli.clidriver import create_clidriver
-import pandas as pd
-
 REDSHIFT_RESERVED_WORDS = [
     "aes128",
     "aes256",
@@ -253,47 +249,6 @@ S3_CREATE_BUCKET_KWARGS = [
     "GrantWrite",
     "GrantWriteACP",
 ]
-
-
-def _set_aws_env_from_config(env: dict, config: dict) -> dict:
-    if config.get("aws_access_key_id") is not None:
-        env["AWS_ACCESS_KEY_ID"] = config.get("aws_access_key_id")
-    if config.get("aws_secret_access_key") is not None:
-        env["AWS_SECRET_ACCESS_KEY"] = config.get("aws_secret_access_key")
-    if config.get("aws_session_token") is not None:
-        env["AWS_SESSION_TOKEN"] = config.get("aws_session_token")
-    if config.get("metadata_service_timeout") is not None:
-        env["AWS_METADATA_SERVICE_TIMEOUT"] = config.get("metadata_service_timeout")
-    if config.get("metadata_service_num_attempts") is not None:
-        env["AWS_METADATA_SERVICE_NUM_ATTEMPTS"] = config.get(
-            "metadata_service_num_attempts"
-        )
-    return env
-
-
-def run_awscli(*cmd, config: dict = None):
-    """Work around to run `awscli` commands for features not implemented in boto3.
-    
-    Args:
-        *cmd: Commands that are normally passed to awscli.
-        config (optional): Config to override default awscli config.
-
-    Example:
-        >>> run_awscli('s3', 'sync', 's3://bucket/source', 's3://bucket/destination', '--delete')
-    """
-    old_env = os.environ.copy()
-    try:
-        env = os.environ.copy()
-        env["LC_CTYPE"] = "en_US.UTF"
-        if config is not None:
-            env = _set_aws_env_from_config(env, config)
-        os.environ.update(env)
-        exit_code = create_clidriver().main([*cmd])
-        if exit_code > 0:
-            raise RuntimeError(f"awscli exited with code {exit_code}")
-    finally:
-        os.environ.clear()
-        os.environ.update(old_env)
 
 
 class AWSUtils:

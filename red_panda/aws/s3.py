@@ -12,7 +12,7 @@ from red_panda.aws import (
     S3_CREATE_BUCKET_KWARGS,
 )
 from red_panda.utils import filter_kwargs, make_valid_uri
-from red_panda.aws import AWSUtils, run_awscli
+from red_panda.aws import AWSUtils
 
 
 LOGGER = logging.getLogger(__name__)
@@ -247,12 +247,3 @@ class S3Utils(AWSUtils):
             LOGGER.info(f"Reading file {f}")
             dfs.append(self.s3_to_df(bucket, f, **s3_get_kwargs, **read_table_kwargs))
         return pd.concat(dfs)
-
-    def sync(self, source: str, destination: str, *args):
-        """Sync two S3 buckets or directories.
-
-        Args:
-            source: Source bucket or directory.
-            destination: Destination bucket or directory.
-        """
-        run_awscli("s3", "sync", source, destination, *args, config=self.aws_config)
