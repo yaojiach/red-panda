@@ -1,6 +1,6 @@
 # Red Panda
 
-![image](https://raw.githubusercontent.com/jucyai/red-panda/master/artwork/logo.jpg)
+![image](https://raw.githubusercontent.com/jucyai/red-panda/master/red-panda.jpg)
 
 [![docs](https://readthedocs.org/projects/red-panda/badge/?version=dev)](https://red-panda.readthedocs.io/en/dev/?badge=dev)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/jucyao/red-panda/blob/master/LICENSE)
