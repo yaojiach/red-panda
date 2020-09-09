@@ -47,7 +47,6 @@ def groupby_mutate(
     Example:
         >>> def func(x):
                 return x['a'].nunique() / x['b'].nunique()
-        
         >>> func_dict = {
                 'a_u': lambda x: x['a'].nunique(),
                 'c': func
