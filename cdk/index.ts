@@ -9,17 +9,22 @@ import * as dotenv from 'dotenv'
 
 dotenv.config({ path: '../.env' })
 
+const ID_PREFIX = 'RedPandaTest'
+const STACK_NAME = process.env.STACK_NAME
+
+const makeId = (suffix: string) => `${ID_PREFIX}${suffix}`
+
 export class RedPandaTestStack extends Stack {
   constructor(scope: App, id: string) {
     super(scope, id)
 
     // Bucket
-    const role = new Role(this, 'RedPandaTestRole', {
+    const role = new Role(this, makeId('Role'), {
       assumedBy: new ServicePrincipal('redshift.amazonaws.com')
     })
 
-    const bucket = new Bucket(this, 'RedPandaTestBaseBucket', {
-      bucketName: `redpandateststack-base-${uuidv4()}`,
+    const bucket = new Bucket(this, makeId('BaseBucket'), {
+      bucketName: `${STACK_NAME}-${process.env.BASE_BUCKET_ID}-${uuidv4()}`,
       versioned: false,
       publicReadAccess: false,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
@@ -29,9 +34,9 @@ export class RedPandaTestStack extends Stack {
     bucket.grantReadWrite(role)
 
     // Redshift
-    const vpc = new Vpc(this, 'RedPandaTestVPC', {})
+    const vpc = new Vpc(this, makeId('VPC'), {})
 
-    const sg = new SecurityGroup(this, 'RedPandaTestSecurityGroup', {
+    const sg = new SecurityGroup(this, makeId('SecurityGroup'), {
       vpc: vpc
     })
 
@@ -39,8 +44,8 @@ export class RedPandaTestStack extends Stack {
     sg.node.addDependency(vpc)
 
     const { subnetIds } = vpc.selectSubnets({ subnetType: SubnetType.PUBLIC })
-    const subnetGroup = new CfnClusterSubnetGroup(this, 'RedPandaTestSubnets', {
-      description: `Subnets for Redshift cluster`,
+    const subnetGroup = new CfnClusterSubnetGroup(this, makeId('Subnets'), {
+      description: 'Subnets for Redshift cluster',
       subnetIds
     })
 
@@ -48,7 +53,7 @@ export class RedPandaTestStack extends Stack {
       applyToUpdateReplacePolicy: true
     })
 
-    const cluster = new CfnCluster(this, 'RedPandaTestRedshift', {
+    const cluster = new CfnCluster(this, makeId('Redshift'), {
       masterUsername: process.env.REDSHIFT_USERNAME || '',
       masterUserPassword: process.env.REDSHIFT_PASSWORD || '',
       dbName: process.env.REDSHIFT_DB || '',
@@ -64,22 +69,22 @@ export class RedPandaTestStack extends Stack {
     cluster.node.addDependency(sg)
 
     // Glue
-    const glueDB = new Database(this, 'RedPandaTestGlueDB', {
-      databaseName: 'redpandatestgluedb'
+    const glueDB = new Database(this, makeId('GlueDB'), {
+      databaseName: process.env.GLUE_DB || ''
     })
 
-    const glueBucket = new Bucket(this, 'RedPandaTestGlueBucket', {
-      bucketName: `redpandateststack-glue-${uuidv4()}`,
+    const glueBucket = new Bucket(this, makeId('GlueBucket'), {
+      bucketName: `${STACK_NAME}-${process.env.GLUE_BUCKET_ID}-${uuidv4()}`,
       versioned: false,
       publicReadAccess: false,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       removalPolicy: RemovalPolicy.DESTROY
     })
 
-    new Table(this, 'MyTable', {
+    new Table(this, makeId('GlueTable'), {
       bucket: glueBucket,
       database: glueDB,
-      tableName: 'redpandatestgluetable',
+      tableName: process.env.GLUE_TABLE_NAME || '',
       columns: [
         {
           name: 'col0',
@@ -94,8 +99,8 @@ export class RedPandaTestStack extends Stack {
     })
 
     // Athena
-    new Bucket(this, 'RedPandaTestAthenaBucket', {
-      bucketName: `redpandateststack-athena-${uuidv4()}`,
+    new Bucket(this, makeId('AthenaBucket'), {
+      bucketName: `${STACK_NAME}-${process.env.ATHENA_BUCKET_ID}-${uuidv4()}`,
       versioned: false,
       publicReadAccess: false,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,

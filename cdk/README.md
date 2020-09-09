@@ -1,10 +1,17 @@
 # RedPanda Test CDK
 
-## Useful commands
+## Basic commands
 
 ```sh
+# Build ts
 npm run build
+
+# Check stack resources
 cdk ls
-cdk deploy
-cdk destroy
+
+# Create stack
+cdk deploy --require-approval never
+
+# Delete stack
+cdk destroy --force
 ```
