@@ -1,7 +1,7 @@
 import warnings
 from collections import OrderedDict
 from textwrap import dedent
-from typing import Union, Optional
+from typing import Union, Optional, List
 import logging
 
 import pandas as pd
@@ -321,18 +321,24 @@ class RedPanda(RedshiftUtils, S3Utils):
         path: str = None,
         prefix: str = None,
         iam_role: str = None,
+        file_format: str = None,
+        partition_by: List[str] = None,
+        include_partition_column: bool = False,
         manifest: bool = False,
-        delimiter: str = "|",
+        header: bool = False,
+        delimiter: str = None,
         fixedwidth: Union[str, int] = None,
         encrypted: bool = False,
         bzip2: bool = False,
         gzip: bool = False,
-        addquotes: bool = True,
+        zstd: bool = False,
+        addquotes: bool = False,
         null: str = None,
         escape: bool = False,
         allowoverwrite: bool = False,
         parallel: str = "ON",
         maxfilesize: Union[str, int, float] = None,
+        region: str = None,
     ):
         """Run sql and unload result to S3.
 
@@ -343,13 +349,16 @@ class RedPanda(RedshiftUtils, S3Utils):
             prefix (optional): Prefix of the set of files.
             iam_role (optional): IAM Role string. If provided, this will be used as authorization 
                 instead of access_key_id/secret_access_key. This feature is untested.
+            file_format (optional): CSV or PARQUET.
             manifest (optional): Whether or not to create the manifest file.
+            header (optional): Whether or not to include header.
             delimiter (optional): Delimiter charater if the output file is delimited.
             fixedwidth (optional): If not None, it will overwrite delimiter and use fixedwidth 
                 format instead.
             encrypted (optional): Whether or not the files should be encrypted.
             bzip2 (optional): Whether or not the files should be compressed with bzip2.
             gzip (optional): Whether or not the files should be compressed with gzip.
+            zstd (optional): Whether or not the files should be compressed with zstd.
             addquotes (optional): Whether or not values with delimiter characters should be quoted.
             null (optional): Specify the NULL AS string.
             escape (optional): Whether to include the ESCAPE argument in UNLOAD.
@@ -358,6 +367,7 @@ class RedPanda(RedshiftUtils, S3Utils):
             parallel (optional): ON or OFF. Whether or not to use parallel and unload into multiple 
                 files.
             maxfilesize (optional): Maxfilesize argument for UNLOAD.
+            region (optional): AWS region if S3 region is different from Redshift region.
         """
         destination_option = ""
         if path is not None:
@@ -376,12 +386,71 @@ class RedPanda(RedshiftUtils, S3Utils):
             {existing_keys}
             """
             warnings.warn(dedent(warn_message))
-        LOGGER.info(f">>>>>> {destination_option}")
         destination_option = make_valid_uri(f"s3://{dest_bucket}", destination_option)
-        if bzip2 and gzip:
-            raise ValueError("Only one of [bzip2, gzip] should be True")
+
+        if sum([bzip2, gzip, zstd]) > 1:
+            raise ValueError("Only one of [bzip2, gzip, zstd] should be True.")
+
+        file_format_option = ""
+        if file_format is not None:
+            if file_format == "CSV":
+                if fixedwidth:
+                    raise ValueError(
+                        "fixedwidth should not be specified for CSV file_format."
+                    )
+                delimiter = ","
+                file_format_option = "format CSV"
+            elif file_format == "PARQUET":
+                file_format_option = "format PARQUET"
+                if delimiter:
+                    raise ValueError(
+                        "delimiter should not be specified for PARQUET file_format."
+                    )
+                if fixedwidth:
+                    raise ValueError(
+                        "fixedwidth should not be specified for PARQUET file_format."
+                    )
+                if addquotes:
+                    raise ValueError(
+                        "addquotes should not be specified for PARQUET file_format."
+                    )
+                if escape:
+                    raise ValueError(
+                        "escape should not be specified for PARQUET file_format."
+                    )
+                if null:
+                    raise ValueError(
+                        "null should not be specified for PARQUET file_format."
+                    )
+                if header:
+                    raise ValueError(
+                        "header should not be specified for PARQUET file_format."
+                    )
+                if gzip:
+                    raise ValueError(
+                        "gzip should not be specified for PARQUET file_format."
+                    )
+                if bzip2:
+                    raise ValueError(
+                        "bzip2 should not be specified for PARQUET file_format."
+                    )
+                if zstd:
+                    raise ValueError(
+                        "zstd should not be specified for PARQUET file_format."
+                    )
+            else:
+                raise ValueError("File format can only be CSV or PARQUET if specified.")
+
+        partition_include_option = " INCLUDE" if include_partition_column else ""
+        partition_option = (
+            f"{','.join(partition_by)}{partition_include_option}"
+            if partition_by
+            else ""
+        )
+
         manifest_option = "manifest" if manifest else ""
-        delimiter_option = f"delimiter '{delimiter}'"
+        header_option = "header" if header else ""
+        delimiter_option = f"delimiter '{delimiter}'" if delimiter else "delimiter '|'"
         if fixedwidth is not None:
             fixedwidth_option = f"fixedwidth '{fixedwidth}'"
             delimiter_option = ""
@@ -390,6 +459,7 @@ class RedPanda(RedshiftUtils, S3Utils):
         encrypted_option = "encrypted" if encrypted else ""
         bzip2_option = "bzip2" if bzip2 else ""
         gzip_option = "gzip" if gzip else ""
+        zstd_option = "zstd" if zstd else ""
         addquotes_option = "addquotes" if addquotes else ""
         null_option = f"null as '{null}'" if null is not None else ""
         escape_option = "escape" if escape else ""
@@ -398,6 +468,7 @@ class RedPanda(RedshiftUtils, S3Utils):
         maxfilesize_option = (
             f"maxfilesize '{maxfilesize}'" if maxfilesize is not None else ""
         )
+        region_option = f"region {region}" if region else ""
         aws_access_key_id = self.aws_config.get("aws_access_key_id")
         aws_secret_access_key = self.aws_config.get("aws_secret_access_key")
         if (
@@ -420,22 +491,28 @@ class RedPanda(RedshiftUtils, S3Utils):
             iam_role_option = ""
             access_key_id_option = f"access_key_id '{aws_access_key_id}'"
             secret_access_key_option = f"secret_access_key '{aws_secret_access_key}'"
+
         sql = sql.replace("\n", " ")
         unload_template = f"""\
         unload ('{sql}')
         to '{destination_option}'
+        {file_format_option}
+        {partition_option}
         {manifest_option}
+        {header_option}
         {delimiter_option}
         {fixedwidth_option}
         {encrypted_option}
         {bzip2_option}
         {gzip_option}
+        {zstd_option}
         {addquotes_option}
         {null_option}
         {escape_option}
         {allowoverwrite_option}
         {parallel_option}
         {maxfilesize_option}
+        {region_option}
         {access_key_id_option}
         {secret_access_key_option}
         {aws_token_option}
