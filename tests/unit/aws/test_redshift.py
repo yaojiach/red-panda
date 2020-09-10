@@ -1,5 +1,4 @@
 import pytest
-import psycopg2
 
 from red_panda.aws.redshift import RedshiftUtils
 

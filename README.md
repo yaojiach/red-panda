@@ -15,6 +15,7 @@ Easily interact with cloud (AWS) in your Data Science workflow.
 - Use Redshift utility functions to easily accomplish common tasks such as creating a table.
 - Manage files on S3.
 - Query data on S3 directly with Athena.
+- Pandas DataFrame utility functions.
 
 ## Installation
 
@@ -37,13 +38,13 @@ redshift_conf = {
     "dbname": "awesome-db",
 }
 
-s3_conf = {
+aws_conf = {
     "aws_access_key_id": "your-aws-access-key-id",
     "aws_secret_access_key": "your-aws-secret-access-key",
     # "aws_session_token": "temporary-token-if-you-have-one",
 }
 
-rp = RedPanda(redshift_conf, s3_conf)
+rp = RedPanda(redshift_conf, aws_conf)
 ```
 
 Load your Pandas DataFrame into Redshift as a new table.

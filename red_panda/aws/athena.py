@@ -1,3 +1,4 @@
+from multiprocessing import Value
 from pyathena import connect
 from pyathena.util import as_pandas
 
@@ -26,19 +27,28 @@ class AthenaUtils(AWSUtils):
     TODO:
         * Complete Support for other cursor types.
         * Full parameters on `connect`.
-        * Use region from `aws_config` if not provided
     """
 
-    def __init__(self, aws_config: dict, s3_staging_dir: dict, region_name: str = None):
+    def __init__(
+        self,
+        aws_config: dict,
+        s3_staging_dir: dict,
+        work_group: str = None,
+        region_name: str = None,
+    ):
         super().__init__(aws_config=aws_config)
+        self.work_group = work_group
         self.cursor = connect(
             aws_access_key_id=self.aws_config.get("aws_access_key_id"),
             aws_secret_access_key=self.aws_config.get("aws_secret_access_key"),
             s3_staging_dir=s3_staging_dir,
-            region_name=region_name,
+            work_group=work_group,
+            region_name=region_name or aws_config.get("region_name"),
         ).cursor()
 
-    def run_query(self, sql: str, as_df: bool = False) -> AthenaQueryResult:
+    def run_query(
+        self, sql: str, as_df: bool = False, use_cache: bool = False
+    ) -> AthenaQueryResult:
         """Run query on Athena.
 
         Args:
@@ -46,16 +56,21 @@ class AthenaUtils(AWSUtils):
             as_df (optional): Whether to return the result as DataFrame.
 
         Returns:
-
+            Query result as DataFrame or List[Tuple].
         """
-        self.cursor.execute(sql)
+        cache_size = 0
+        if use_cache:
+            if self.work_group is None:
+                raise ValueError("Workgroup must be specified to use cache.")
+            cache_size = 50
+        self.cursor.execute(sql, cache_size=cache_size)
+
         if as_df:
             return as_pandas(self.cursor)
 
         res = []
         desc = self.cursor.description
         for row in self.cursor:
-            LOGGER.info(f"{row}")
             r = {}
             for i, c in enumerate(desc):
                 r[c[0]] = row[i]

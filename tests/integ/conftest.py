@@ -17,6 +17,8 @@ ATHENA_BUCKET_ID = os.getenv("ATHENA_BUCKET_ID")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 DEFAULT_REGION = os.getenv("DEFAULT_REGION")
+GLUE_DB = os.getenv("GLUE_DB")
+GLUE_TABLE_NAME = os.getenv("GLUE_TABLE_NAME")
 
 GLUE_DATA = pd.DataFrame({"col0": ["a", "b"], "col1": ["x", "y"]})
 
@@ -147,6 +149,16 @@ def glue_bucket():
 @pytest.fixture(scope="module")
 def athena_result_location():
     return f"s3://{get_s3_bucket(ATHENA_BUCKET_ID)}/result"
+
+
+@pytest.fixture(scope="module")
+def glue_db():
+    return GLUE_DB
+
+
+@pytest.fixture(scope="module")
+def glue_table_name():
+    return GLUE_TABLE_NAME
 
 
 @pytest.fixture(scope="module")
