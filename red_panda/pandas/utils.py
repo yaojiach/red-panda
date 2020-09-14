@@ -40,35 +40,22 @@ def row_number(
 
 
 def groupby_mutate(
-    df: pd.DataFrame, group_by: Union[List[str], str], func_dict: Dict[str, Callable]
+    df: pd.DataFrame,
+    group_by: Union[List[str], str],
+    func_dict: Dict[str, Callable],
+    inplace: bool = False,
 ) -> pd.DataFrame:
     """Similar to R's dplyr::mutate.
 
     Example:
         >>> def func(x):
-                return x['a'].nunique() / x['b'].nunique()
+                return x["x"] / sum(x["x"])
         >>> func_dict = {
-                'a_u': lambda x: x['a'].nunique(),
-                'c': func
+                'ratio': x["x"] / sum(x["x"])
             }
-        >>> groupby_mutate(df, 'b', func_dict)
+        >>> groupby_mutate(df, "b", func_dict)
     """
-    return (
-        df.groupby(group_by, group_keys=False)
-        .apply(
-            lambda x: pd.Series(
-                {col: func(x) for col, func in func_dict.items()},
-                index=list(func_dict.keys()),
-            )
-        )
-        .reset_index()
-    )
-
-
-def groupby_distinct(
-    df: pd.DataFrame, group_by: Union[List[str], str], distinct: str
-) -> pd.DataFrame:
-    """Unique count per group."""
-    func_dict = {}
-    func_dict[distinct] = lambda x: x[distinct].nunique()
-    return groupby_mutate(df, group_by, func_dict)
+    out = df if inplace else df.copy()
+    for col, func in func_dict.items():
+        out[col] = out.groupby(group_by, group_keys=False).apply(func)
+    return out

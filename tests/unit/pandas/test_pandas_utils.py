@@ -1,6 +1,10 @@
 import pandas as pd
 
-from red_panda.pandas.utils import merge_dfs, row_number, groupby_distinct
+from red_panda.pandas.utils import (
+    merge_dfs,
+    row_number,
+    groupby_mutate
+)
 
 import logging
 
@@ -22,7 +26,19 @@ def test_row_number_return_series():
     assert all(row_number(df, ["group"], ["sort"]) == series)
 
 
-def test_groupby_distinct():
-    df = pd.DataFrame(data={"col0": [0, 1, 1, 2, 2], "col1": [1, 2, 3, 4, 4]})
-    computed = pd.DataFrame(data={"col0": [0, 1, 2], "col1": [1, 2, 1]})
-    assert groupby_distinct(df, "col0", "col1").equals(computed)
+def test_groupby_mutate():
+    df = pd.DataFrame({"group": [0, 0, 1, 1], "x": [1, 1, 1, 3]})
+    result = pd.DataFrame(
+        {"group": [0, 0, 1, 1], "x": [1, 1, 1, 3], "new": [0.5, 0.5, 0.25, 0.75]}
+    )
+    mutated = groupby_mutate(df, "group", {"new": lambda x: x["x"] / sum(x["x"])})
+    assert mutated.equals(result)
+
+
+def test_groupby_mutate_inplace():
+    df = pd.DataFrame({"group": [0, 0, 1, 1], "x": [1, 1, 1, 3]})
+    result = pd.DataFrame(
+        {"group": [0, 0, 1, 1], "x": [1, 1, 1, 3], "new": [0.5, 0.5, 0.25, 0.75]}
+    )
+    groupby_mutate(df, "group", {"new": lambda x: x["x"] / sum(x["x"])}, inplace=True)
+    assert df.equals(result)
