@@ -1,6 +1,7 @@
 build:
 	pipenv run python setup.py sdist bdist_wheel
 release:
+	rm -r dist
 	pipenv run python setup.py sdist bdist_wheel
 	pipenv run python -m twine upload dist/*
 unit-test:
