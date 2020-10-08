@@ -9,6 +9,12 @@ cd cdk
 npm run build
 ```
 
+## Python Environment
+
+```sh
+pipenv install --dev
+```
+
 ## Testing
 
 ```sh

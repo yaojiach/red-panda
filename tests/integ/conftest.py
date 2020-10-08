@@ -25,7 +25,13 @@ GLUE_DATA = pd.DataFrame({"col0": ["a", "b"], "col1": ["x", "y"]})
 
 def cdk_run(args, info, msg):
     LOGGER.info(info)
-    p = Popen(args, cwd="cdk", stdin=PIPE, stdout=PIPE, stderr=PIPE,)
+    p = Popen(
+        args,
+        cwd="cdk",
+        stdin=PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
+    )
     out, err = p.communicate()
     LOGGER.info(out)
     if err != b"":
