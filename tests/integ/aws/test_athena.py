@@ -44,4 +44,3 @@ def test_athena_run_query_use_cache(athena_utils, glue_db, glue_table_name):
     athena_utils.run_query(sql, use_cache=True)
     query_id_2 = athena_utils.cursor.query_id
     assert query_id_1 == query_id_2
-

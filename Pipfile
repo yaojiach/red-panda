@@ -5,8 +5,6 @@ verify_ssl = true
 
 [dev-packages]
 black = "*"
-pytest = "*"
-tox = "*"
 
 [packages]
 pandas = "*"
@@ -23,6 +21,8 @@ sphinx-rtd-theme = "*"
 m2r2 = "*"
 pytest-mock = "*"
 twine = "*"
+pytest = "*"
+tox = "*"
 
 [requires]
 python_version = "3.8"
