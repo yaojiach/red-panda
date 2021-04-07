@@ -1,11 +1,8 @@
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 import logging
+from logging import NullHandler
 
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="🐼 RedPanda | %(asctime)s | %(name)s | %(levelname)s | %(message)s",
-)
+logging.getLogger(__name__).addHandler(NullHandler())
 
 from red_panda.red_panda import RedPanda
